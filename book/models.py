@@ -2,7 +2,7 @@ from django.db import models
 
 # Create your models here.
 class Book(models.Model):
-    START = 100000
+    START = 1000000
     title=models.CharField(max_length=100)
     price = models.IntegerField()
     author = models.CharField(max_length=100)
@@ -11,8 +11,9 @@ class Book(models.Model):
     dimension = models.CharField(max_length=20)
     weight = models.FloatField()
     description = models.TextField(default="")
+    max_stock = models.IntegerField(default=10000)
     picture = models.ImageField(upload_to="books",default="default.jpg")
-
+    delivery_factor = models.FloatField(default=1)
     def __str__(self):
         return self.title
     
