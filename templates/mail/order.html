@@ -1,0 +1,46 @@
+<div style="text-align: center;">
+    <img src="https://drive.google.com/uc?export=view&id=16Tw_YQSTEBbAlbQo01wl5v05UvSGq-5c" width="100" height="100" alt=""/>
+    <br/>
+    <h1 style="text-align: center;">Thanks!!! for placing order</h1>
+    <h3>Dear {{name}}, we have succesfully received your order</h3>
+    <h3>Order Id: {{order_id}}</h3>
+    <h3>Here is your order summary</h3>
+        <div style="display: flex; justify-content: center; text-align: center;">
+        <table style="text-align: center; margin:auto; border: 1px solid black; border-collapse: collapse; font-size: 1.3rem;">
+            <thead>
+                <tr>
+                    <th style="text-align: center; border: 1px solid black; padding:5px">Title</th>
+                    <th style="text-align: center; border: 1px solid black; padding:5px">Price (per item)</th>
+                    <th style="text-align: center; border: 1px solid black; padding:5px">Quantity</th>
+                    <th style="text-align: center; border: 1px solid black; padding:5px">Weight</th>
+                    <th style="text-align: center; border: 1px solid black; padding:5px">Dimension</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for orderItem in orderDetails %}
+                <tr>
+                    <td style="text-align: center; border: 1px solid black; padding:5px">{{orderItem.title}}</td>
+                    <td style="text-align: center; border: 1px solid black; padding:5px">{{orderItem.price}}</td>
+                    <td style="text-align: center; border: 1px solid black; padding:5px">{{orderItem.qty}}</td>
+                    <td style="text-align: center; border: 1px solid black; padding:5px">{{orderItem.weight}}g</td>
+                    <td style="text-align: center; border: 1px solid black; padding:5px">{{orderItem.dimension}}</td>
+                </tr>
+                {% endfor %}
+                <br>
+                <tr>
+                    <td style="text-align: center; border: 1px solid black; padding:5px" colspan="3">Amount</td>
+                    <td style="text-align: center; border: 1px solid black; padding:5px" colspan="2">{{amount}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: center; border: 1px solid black; padding:5px" colspan="3">Delivery Charges</td>
+                    <td style="text-align: center; border: 1px solid black; padding:5px" colspan="2">{{deliveryCharges}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: center; border: 1px solid black; padding:5px" colspan="3">Total Amount</td>
+                    <td style="text-align: center; border: 1px solid black; padding:5px" colspan="3">{{totalAmount}}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <h3>For enquiry or support or any queries regarding this order. Please mail us at <a href="mailTo:enquiry@fortuneshelf.com">enquiry@fortuneshelf.com</a> </h3>
+    </div>

@@ -77,3 +77,11 @@ def book_by_id(request,bookid):
         return Response(serializer.data,status=200)
     else:
         return Response({"status":"fail","message":"Book not found"},404)
+
+def books_by_ids(bookids):
+    START = 1000000
+    bookids = list(map(lambda x:float(x)-START,bookids))
+
+    books = Book.objects.filter(id__in=bookids)
+    serializer = BookSerializer(books,many=True)
+    return serializer.data
