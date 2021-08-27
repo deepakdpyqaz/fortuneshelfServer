@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-h*3*bkdxfh-sm#6(om$q5!f5jx!cp0vkty+8tuw_ugsv9y(hxm
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["app.fortuneshelf.com","fortuneshelf-load-balancer-1472405162.us-east-1.elb.amazonaws.com","localhost","127.0.0.1"]
 
 
 # Application definition
@@ -148,6 +148,10 @@ MEDIA_URL="/media/"
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ORIGIN_WHITELIST = (
   'http://localhost:3000',
+  "https://www.fortuneshelf.com",
+  "http://www.fortuneshelf.com",
+  "https://fortuneshelf.com",
+  "http://fortuneshelf.com"
 )
 
 
