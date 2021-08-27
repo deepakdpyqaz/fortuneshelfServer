@@ -6,6 +6,7 @@ from rest_framework.response import Response
 import csv
 import time
 from django.db.models import Q
+import os
 # Create your views here.
 @api_view(["GET"])
 def getBooks(request):
@@ -85,3 +86,31 @@ def books_by_ids(bookids):
     books = Book.objects.filter(id__in=bookids)
     serializer = BookSerializer(books,many=True)
     return serializer.data
+
+def getLanguage(text):
+    langList = ["hindi","english","marathi","bangali","nepali","oriya","other book","gujarati","kannada","malayalam","tamil","telugu"]
+    for item in langList:
+        if item in text:
+            return item
+    return "GIBRISH"
+
+@api_view(["GET"])
+def upadatePic(request):
+    print(os.getcwd())
+    os.chdir("media/")
+    images = os.listdir()
+    for i in range(len(images)):
+        img=images[i]
+        img = ".".join(img.split(".")[:-1])
+        lst = img.split(" ")
+        images[i] = " ".join(lst[:-1]),lst[-1],images[i]
+    count=0
+    for img,lang,original in images:
+        if img and img!="default":
+            lang = getLanguage(lang.lower())
+            book = Book.objects.filter(title__icontains=img,language__icontains=lang)
+            for bk in book:
+                bk.picture=original
+                bk.save()
+            count+=len(book)
+    return Response({"images":images,"count":count})
