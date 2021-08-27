@@ -82,6 +82,7 @@ WSGI_APPLICATION = 'fortuneshelf.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
+print(os.getenv("DB_HOST"))
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
