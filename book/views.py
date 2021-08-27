@@ -36,23 +36,23 @@ def getBooksFromDb(page_number,per_page,order_by,desc=False,low_price=None,high_
     serializer = BookSerializer(books,many=True)
     return serializer.data
 
-def addBooks(request):
-    bookList=[]
-    with open("data.csv", encoding="utf8") as f:
-        rowReader = csv.reader(f)
-        i=0
-        for row in rowReader:
-            if i==0:
-                i+=1
-                continue
-            if(row[0]):
-                price = row[5][:len(row[5])-2]
-                if not price:
-                    price=100
-                book = Book(title=row[2],price=price,author="default",language=row[3].lower(),dimension=row[6],description=row[7],weight=price)
-                bookList.append(book)
-    objs = Book.objects.bulk_create(bookList)
-    return Response({"Message":"Success"})
+# def addBooks(request):
+#     bookList=[]
+#     with open("data.csv", encoding="utf8") as f:
+#         rowReader = csv.reader(f)
+#         i=0
+#         for row in rowReader:
+#             if i==0:
+#                 i+=1
+#                 continue
+#             if(row[0]):
+#                 price = row[5][:len(row[5])-2]
+#                 if not price:
+#                     price=100
+#                 book = Book(title=row[2],price=price,author="default",language=row[3].lower(),dimension=row[6],description=row[7],weight=price)
+#                 bookList.append(book)
+#     objs = Book.objects.bulk_create(bookList)
+#     return Response({"Message":"Success"})
 @api_view(["GET"])
 def searchBookByKeyWords(request):
     queryString = request.query_params.get("query",None)
@@ -94,23 +94,24 @@ def getLanguage(text):
             return item
     return "GIBRISH"
 
-@api_view(["GET"])
-def upadatePic(request):
-    print(os.getcwd())
-    os.chdir("media/")
-    images = os.listdir()
-    for i in range(len(images)):
-        img=images[i]
-        img = ".".join(img.split(".")[:-1])
-        lst = img.split(" ")
-        images[i] = " ".join(lst[:-1]),lst[-1],images[i]
-    count=0
-    for img,lang,original in images:
-        if img and img!="default":
-            lang = getLanguage(lang.lower())
-            book = Book.objects.filter(title__icontains=img,language__icontains=lang)
-            for bk in book:
-                bk.picture=original
-                bk.save()
-            count+=len(book)
-    return Response({"images":images,"count":count})
+# @api_view(["GET"])
+# def upadatePic(request):
+#     print(os.getcwd())
+#     os.chdir("media/")
+#     images = os.listdir()
+#     for i in range(len(images)):
+#         img=images[i]
+#         img = ".".join(img.split(".")[:-1])
+#         lst = img.split(" ")
+#         images[i] = " ".join(lst[:-1]),lst[-1],images[i]
+#     count=0
+#     for img,lang,original in images:
+#         if img and img!="default":
+#             lang = getLanguage(lang.lower())
+#             book = Book.objects.filter(title__icontains=img,language__icontains=lang)
+#             for bk in book:
+#                 bk.picture=original
+#                 bk.save()
+#             count+=len(book)
+#     return Response({"status":"sucess","count":count})
+
