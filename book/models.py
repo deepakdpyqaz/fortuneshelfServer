@@ -21,7 +21,7 @@ class Book(models.Model):
     def bookId(self):
         return self.START+self.id
     
-    @staticmethod
-    def getId(bookId):
-        return bookId - START
+    @classmethod
+    def getId(self,bookId):
+        return int(bookId) - self.START
     

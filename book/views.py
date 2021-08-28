@@ -20,9 +20,14 @@ def getBooks(request):
         language = request.query_params.get("language",None)
     except Exception as e:
         return Response({"status":"fail","Message":str(e)},status=400)
-    return Response(getBooksFromDb(page_number,per_page,order_by,isDescending,low_price,high_price,language))
+    try:
+        return Response(getBooksFromDb(page_number,per_page,order_by,isDescending,low_price,high_price,language))
+    except Exception as e:
+        return Response({"status":"fail","message":"Internal Server Error"},status=500)
 
 def getBooksFromDb(page_number,per_page,order_by,desc=False,low_price=None,high_price=None,language=None):
+    if not order_by:
+        order_by="id"
     if desc:
         order_by="-"+order_by
     filters={}
@@ -79,13 +84,17 @@ def book_by_id(request,bookid):
     else:
         return Response({"status":"fail","message":"Book not found"},404)
 
-def books_by_ids(bookids):
+def books_by_ids(bookids,obj=False):
     START = 1000000
     bookids = list(map(lambda x:float(x)-START,bookids))
 
-    books = Book.objects.filter(id__in=bookids)
-    serializer = BookSerializer(books,many=True)
-    return serializer.data
+    books = Book.objects.filter(id__in=bookids).order_by("id")
+    if obj:
+        return books
+    else:
+        serializer= BookSerializer(books,many=True)
+        return serializer.data
+
 
 def getLanguage(text):
     langList = ["hindi","english","marathi","bangali","nepali","oriya","other book","gujarati","kannada","malayalam","tamil","telugu"]
@@ -114,4 +123,15 @@ def getLanguage(text):
 #                 bk.save()
 #             count+=len(book)
 #     return Response({"status":"sucess","count":count})
+
+def manageStock(bookDetails):
+    books = books_by_ids(bookDetails.keys(),obj=True)
+    for bk in books:
+        if bk.max_stock<bookDetails[str(bk.bookId)]:
+            return False,{"message":f"{bk.title} out of stock"}
+    for bk in books:
+        bk.max_stock = bk.max_stock-bookDetails[str(bk.bookId)]
+        bk.save()
+    serializer = BookSerializer(books,many=True)
+    return True,{"data":serializer.data}
 

@@ -5,7 +5,8 @@ import bcrypt
 class User(models.Model):
     mobile = models.CharField(max_length=15,unique=True,null=True)
     email = models.CharField(max_length=50,unique=True,null=True)
-    name = models.CharField(max_length=50)
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
     _password = models.CharField(max_length=100,null=True)
     age = models.IntegerField(null=True)
     GENDER=[
@@ -14,7 +15,7 @@ class User(models.Model):
         ('O',"other")
     ]
     gender = models.CharField(max_length=2,choices=GENDER,null=True)
-    token = models.CharField(max_length=20,null=True)
+    token = models.CharField(max_length=100,null=True)
     created_on = models.DateTimeField(null=True)
     otp = models.IntegerField(null=True)
     @property
@@ -31,12 +32,13 @@ class User(models.Model):
         return bcrypt.checkpw(passwd.encode("utf-8"),self._password.encode("utf-8"))
 
     def __str__(self):
-        return self.name
+        return self.first_name + " "+ self.last_name
 
 class UserUnverified(models.Model):
     mobile = models.CharField(max_length=15,null=True)
     email = models.CharField(max_length=50,null=True)
-    name = models.CharField(max_length=50)
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
     age = models.IntegerField(null=True)
     GENDER=[
         ('M',"Male"),
@@ -55,7 +57,7 @@ class UserUnverified(models.Model):
     otpGenTime=models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.name
+        return self.first_name + " "+ self.last_name
 
 
 class BillingProfile(models.Model):
@@ -68,5 +70,5 @@ class BillingProfile(models.Model):
     district = models.CharField(max_length=30)
 
     def __str__(self):
-        return self.userId.name
+        return self.userId.first_name + " "+self.userId.last_name
 

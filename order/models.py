@@ -10,9 +10,9 @@ class OrderStatus(enum.Enum):
 
 # Create your models here.
 class Order(models.Model):
-    orderId = models.CharField(max_length=40,unique=True,primary_key=True)
     userId = models.ForeignKey(User,null=True,blank=True,on_delete = models.SET_NULL)
-    name=models.CharField(max_length=50)
+    first_name=models.CharField(max_length=50)
+    last_name=models.CharField(max_length=50,default="")
     mobile = models.CharField(max_length=15)
     email = models.CharField(max_length=40)
     address = models.TextField()
@@ -26,10 +26,21 @@ class Order(models.Model):
     trackingId = models.CharField(max_length=30,null=True)
     trackingUrl = models.CharField(max_length=100,null=True)
     status = models.IntegerField(default=OrderStatus.pending.value)
+    date = models.DateTimeField(auto_now_add=True, blank=True)
     PAYMENTMODE = (
         ("C","COD"),
         ("O","ONLINE")
     )
     paymentMode = models.CharField(max_length=10,choices=PAYMENTMODE )
     def __str__(self):
-        return self.orderId
+        return str(self.orderId) 
+
+    START = 100000
+        
+    @property
+    def orderId(self):
+        return self.START+self.id
+    
+    @classmethod
+    def getId(self,orderId):
+        return int(orderId) - self.START
