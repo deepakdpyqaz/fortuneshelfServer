@@ -7,13 +7,32 @@ import csv
 import time
 from django.db.models import Q
 import os
+import threading
+from threading import Thread
+from django.contrib.postgres.search import  SearchQuery, SearchRank, SearchVector
+
+
+class updateBookView(threading.Thread):
+    def __init__(self,booklst):
+        self.booklst=booklst
+        threading.Thread.__init__(self)
+    def run(self):
+        for book in self.booklst:
+            book.view_count = book.view_count+1
+            book.save()
+
+def updateBookViewRecord(booklst):
+    updateBookView(booklst).start()
+
+
+
 # Create your views here.
 @api_view(["GET"])
 def getBooks(request):
     try:
         page_number = int(request.query_params.get("page_number",1))
         per_page = int(request.query_params.get("per_page",25))
-        order_by = request.query_params.get("order_by","id")
+        order_by = request.query_params.get("order_by","-view_count")
         isDescending = bool(request.query_params.get("isDescending",False))
         low_price = int(request.query_params.get("low_price",0))
         high_price = int(request.query_params.get("high_price",0))
@@ -27,7 +46,7 @@ def getBooks(request):
 
 def getBooksFromDb(page_number,per_page,order_by,desc=False,low_price=None,high_price=None,language=None):
     if not order_by:
-        order_by="id"
+        order_by="view_count"
     if desc:
         order_by="-"+order_by
     filters={}
@@ -58,18 +77,16 @@ def getBooksFromDb(page_number,per_page,order_by,desc=False,low_price=None,high_
 #                 bookList.append(book)
 #     objs = Book.objects.bulk_create(bookList)
 #     return Response({"Message":"Success"})
+
+
 @api_view(["GET"])
 def searchBookByKeyWords(request):
     queryString = request.query_params.get("query",None)
     if not queryString:
         return Response([],status=200)
-    queryString = queryString.strip()
-    keywords = queryString.split()
-    booklist=set()
-    for word in keywords:
-        if(len(word)>3):
-            books = Book.objects.filter(Q(title__icontains=word)|Q(description__icontains=word))
-            booklist=booklist.union(set(books))
+    vector = SearchVector("title",weight='A')+SearchVector("description",weight='B') + SearchVector("language",weight='C')
+    query = SearchQuery(queryString)
+    booklist = Book.objects.annotate(rank=SearchRank(vector, query)).filter(rank__gte=0.3).order_by('-rank')
     serializer = BookSerializer(booklist,many=True)
 
     return Response(serializer.data,status=200)
@@ -79,6 +96,7 @@ def book_by_id(request,bookid):
     START = 1000000
     book = Book.objects.filter(id=bookid-START)
     if book:
+        updateBookViewRecord(book)
         serializer = FullBookSerializer(book[0])
         return Response(serializer.data,status=200)
     else:
@@ -89,6 +107,7 @@ def books_by_ids(bookids,obj=False):
     bookids = list(map(lambda x:float(x)-START,bookids))
 
     books = Book.objects.filter(id__in=bookids).order_by("id")
+    updateBookViewRecord(books)
     if obj:
         return books
     else:

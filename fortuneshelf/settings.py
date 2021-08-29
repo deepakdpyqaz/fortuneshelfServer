@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-h*3*bkdxfh-sm#6(om$q5!f5jx!cp0vkty+8tuw_ugsv9y(hxm
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["app.fortuneshelf.com","fortuneshelf-load-balancer-1472405162.us-east-1.elb.amazonaws.com","localhost","127.0.0.1"]
+ALLOWED_HOSTS = ["app.fortuneshelf.com","fortuneshelf-load-balancer-1472405162.us-east-1.elb.amazonaws.com","localhost","127.0.0.1","192.168.43.190"]
 
 
 # Application definition
@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.postgres',
     'rest_framework',
      'corsheaders',
 ]
@@ -148,6 +149,7 @@ MEDIA_URL="/media/"
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ORIGIN_WHITELIST = (
   'http://localhost:3000',
+  'http://192.168.43.190:3000',
   "https://www.fortuneshelf.com",
   "http://www.fortuneshelf.com",
   "https://fortuneshelf.com",
@@ -162,3 +164,8 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_PASSWORD = 'selfish@new'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
+AWS_ACCESS_KEY_ID = os.getenv("AWSAccessKeyId")
+AWS_SECRET_KEY = os.getenv("AWSSecretKey")
+REGION_NAME = os.getenv("region_name")

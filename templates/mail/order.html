@@ -1,5 +1,5 @@
 <div style="text-align: center;">
-    <img src="https://drive.google.com/uc?export=view&id=16Tw_YQSTEBbAlbQo01wl5v05UvSGq-5c" width="100" height="100" alt=""/>
+    <img src="https://app.fortuneshelf.com/media/default.jpg" width="100" height="100" alt=""/>
     <br/>
     <h1 style="text-align: center;">Thanks!!! for placing order</h1>
     <h3>Dear {{name}}, we have succesfully received your order</h3>
@@ -20,7 +20,7 @@
                 {% for orderItem in orderDetails %}
                 <tr>
                     <td style="text-align: center; border: 1px solid black; padding:5px">{{orderItem.title}}</td>
-                    <td style="text-align: center; border: 1px solid black; padding:5px">{{orderItem.price}}</td>
+                    <td style="text-align: center; border: 1px solid black; padding:5px">&#8377; {{orderItem.price}}</td>
                     <td style="text-align: center; border: 1px solid black; padding:5px">{{orderItem.qty}}</td>
                     <td style="text-align: center; border: 1px solid black; padding:5px">{{orderItem.weight}}g</td>
                     <td style="text-align: center; border: 1px solid black; padding:5px">{{orderItem.dimension}}</td>
@@ -29,15 +29,15 @@
                 <br>
                 <tr>
                     <td style="text-align: center; border: 1px solid black; padding:5px" colspan="3">Amount</td>
-                    <td style="text-align: center; border: 1px solid black; padding:5px" colspan="2">{{amount}}</td>
+                    <td style="text-align: center; border: 1px solid black; padding:5px" colspan="2">&#8377; {{amount}}</td>
                 </tr>
                 <tr>
                     <td style="text-align: center; border: 1px solid black; padding:5px" colspan="3">Delivery Charges</td>
-                    <td style="text-align: center; border: 1px solid black; padding:5px" colspan="2">{{deliveryCharges}}</td>
+                    <td style="text-align: center; border: 1px solid black; padding:5px" colspan="2">&#8377; {{deliveryCharges}}</td>
                 </tr>
                 <tr>
                     <td style="text-align: center; border: 1px solid black; padding:5px" colspan="3">Total Amount</td>
-                    <td style="text-align: center; border: 1px solid black; padding:5px" colspan="3">{{totalAmount}}</td>
+                    <td style="text-align: center; border: 1px solid black; padding:5px" colspan="3">&#8377; {{totalAmount}}</td>
                 </tr>
             </tbody>
         </table>

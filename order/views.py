@@ -69,7 +69,7 @@ def track_order(request):
 @api_view(["get"])
 @verify_user
 def get_orders(request):
-    orders = Order.objects.filter(userId=request.user)
+    orders = Order.objects.filter(userId=request.user).order_by("-date")
     serializer = OrderSerializer(orders,many=True)
     response=[]
     for order in serializer.data:

@@ -6,7 +6,6 @@ class BillingProfileSerializer(serializers.ModelSerializer):
         model = BillingProfile
         exclude = ["userId"]
 class UserSerializer(serializers.ModelSerializer):
-    billing_profile = BillingProfileSerializer(read_only=True,many=True)
     class Meta:
         model=User
-        fields=['id','mobile','email',"first_name","last_name","age","gender","token","billing_profile"]
+        fields=['id','mobile','email',"first_name","last_name","age","gender"]
