@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from order.models import Order, OrderStatus
 import uuid
 from book.views import books_by_ids, manageStock
-from mailService import send_html_mail
+from mailService import send_html_mail, send_sms
 from order.serializers import OrderSerializer
 import time
 from user.views import verify_user, get_user
@@ -43,7 +43,13 @@ def make_order(request):
         for bk in books:
             bk["qty"] = details[str(bk["book_id"])]
         totalAmount = float(amount)+float(delivery_charges)
-        send_html_mail("Order Confirmation",{"template":"mail/order.html","data":{"name":first_name+" "+last_name,"amount":float(amount),"totalAmount":totalAmount,"order_id":order.orderId,"deliveryCharges":float(delivery_charges),"orderDetails":books}} , [email])
+        trackingUrl = f"https://fortuneshelf.com/trackorder/{order.orderId}"
+        send_html_mail("Order Confirmation",{"template":"mail/order.html","data":{"name":first_name+" "+last_name,"amount":float(amount),"totalAmount":totalAmount,"order_id":order.orderId,"deliveryCharges":float(delivery_charges),"orderDetails":books,"url":trackingUrl}} , [email])
+        send_sms(
+            "Order Confirmation",
+            {"type": "Order", "params": {"orderId": order.OrderId,"amount":totalAmount,"url":trackingUrl}},
+            [tempUser.mobile],
+        )
         return Response({"status":"success","orderId":order.orderId},status=200)
     except Exception as e:
         print(e)
