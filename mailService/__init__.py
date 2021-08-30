@@ -46,9 +46,9 @@ def send_html_mail(subject, message, recipient_list):
 def message_generator(key,params):
     messages = {
         "Account Verification": "Welcome to FortuneShelf. Use OTP {} to verify your account".format(params.get("otp",None)),  
-        "Verification":"Use OTP {} to verify your account".format(params["otp"]),
+        "Verification":"Use OTP {} to verify your account".format(params.get("otp",None)),
         "Reset Password":"We have recieved the request to reset your password. Use OTP {} to reset your password. If you have not made this request then contact enquiry@fortuneshelf.com".format(params.get("otp",None)),
-        "Order":"Your order with order ID {} for Rs. {} is placed successfully. Track Your order using {}".format(params.get("orderId"),params.get("amount"),params.get("url"))
+        "Order":"Hi, {} your order with order id {} for Rs. {} is placed successfully, you can track your order using the link {} thank you.".format(params.get("name",None),params.get("orderId",None),params.get("amount",None),params.get("url",None))
     }
     return messages.get(key,"")
 

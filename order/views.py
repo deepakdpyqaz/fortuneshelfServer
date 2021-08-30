@@ -43,16 +43,15 @@ def make_order(request):
         for bk in books:
             bk["qty"] = details[str(bk["book_id"])]
         totalAmount = float(amount)+float(delivery_charges)
-        trackingUrl = f"https://fortuneshelf.com/trackorder/{order.orderId}"
+        trackingUrl = f"https://fortuneshelf.com/trackorder/?orderId={order.orderId}"
         send_html_mail("Order Confirmation",{"template":"mail/order.html","data":{"name":first_name+" "+last_name,"amount":float(amount),"totalAmount":totalAmount,"order_id":order.orderId,"deliveryCharges":float(delivery_charges),"orderDetails":books,"url":trackingUrl}} , [email])
         send_sms(
             "Order Confirmation",
-            {"type": "Order", "params": {"orderId": order.OrderId,"amount":totalAmount,"url":trackingUrl}},
-            [tempUser.mobile],
+            {"type": "Order", "params": {"name":first_name+" "+last_name,"orderId": order.orderId,"amount":totalAmount,"url":trackingUrl}},
+            [mobile],
         )
         return Response({"status":"success","orderId":order.orderId},status=200)
     except Exception as e:
-        print(e)
         return Response({"status":"fail","message":"Order not placed"},status=500)
 
 @api_view(["get"])

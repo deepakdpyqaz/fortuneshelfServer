@@ -216,11 +216,11 @@ def verify_user(func):
 def get_user(token):
     if not token:
         return False, None
-    user = User.objects.filter(token=token)
-    if not user:
+    token = Token.objects.filter(token=token)
+    if not token:
         return False, None
     else:
-        return True, user.first()
+        return True, token.first().user
 
 
 class ProfileBilling(APIView):
@@ -254,15 +254,15 @@ class ProfileBilling(APIView):
 class ProfileBillingDetails(APIView):
     @verify_user
     def delete(self,request,id):
-        # try:
+        try:
             billingProfile = BillingProfile.objects.filter(id=id,userId=request.user)
             if not billingProfile:
                 return Response({"status":"fail","message":"Billing Profile Not Found"},status=200)
             billingProfile = billingProfile.first()
             billingProfile.delete()
             return Response({"status":"success"},status=200)
-        # except Exception as e:
-        #     return Response({"status":'fail',"message":"Internal Server Error"},status=500)
+        except Exception as e:
+            return Response({"status":'fail',"message":"Internal Server Error"},status=500)
     @verify_user
     def post(self,request,id):
         try:
