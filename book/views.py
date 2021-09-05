@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view
 from book.models import Book
 from book.serializers import BookSerializer, FullBookSerializer
 from rest_framework.response import Response
+from rest_framework.views import APIView
 import csv
 import time
 from django.db.models import Q
@@ -10,6 +11,7 @@ import os
 import threading
 from threading import Thread
 from django.contrib.postgres.search import  SearchQuery, SearchRank, SearchVector
+from manager.views import verify_manager
 
 
 class updateBookView(threading.Thread):
@@ -60,23 +62,6 @@ def getBooksFromDb(page_number,per_page,order_by,desc=False,low_price=None,high_
     serializer = BookSerializer(books,many=True)
     return serializer.data
 
-# def addBooks(request):
-#     bookList=[]
-#     with open("data.csv", encoding="utf8") as f:
-#         rowReader = csv.reader(f)
-#         i=0
-#         for row in rowReader:
-#             if i==0:
-#                 i+=1
-#                 continue
-#             if(row[0]):
-#                 price = row[5][:len(row[5])-2]
-#                 if not price:
-#                     price=100
-#                 book = Book(title=row[2],price=price,author="default",language=row[3].lower(),dimension=row[6],description=row[7],weight=price)
-#                 bookList.append(book)
-#     objs = Book.objects.bulk_create(bookList)
-#     return Response({"Message":"Success"})
 
 
 @api_view(["GET"])
@@ -102,12 +87,13 @@ def book_by_id(request,bookid):
     else:
         return Response({"status":"fail","message":"Book not found"},404)
 
-def books_by_ids(bookids,obj=False):
+def books_by_ids(bookids,obj=False,record=True):
     START = 1000000
     bookids = list(map(lambda x:float(x)-START,bookids))
 
     books = Book.objects.filter(id__in=bookids).order_by("id")
-    updateBookViewRecord(books)
+    if record:
+        updateBookViewRecord(books)
     if obj:
         return books
     else:
@@ -115,33 +101,6 @@ def books_by_ids(bookids,obj=False):
         return serializer.data
 
 
-def getLanguage(text):
-    langList = ["hindi","english","marathi","bangali","nepali","oriya","other book","gujarati","kannada","malayalam","tamil","telugu"]
-    for item in langList:
-        if item in text:
-            return item
-    return "GIBRISH"
-
-# @api_view(["GET"])
-# def upadatePic(request):
-#     print(os.getcwd())
-#     os.chdir("media/")
-#     images = os.listdir()
-#     for i in range(len(images)):
-#         img=images[i]
-#         img = ".".join(img.split(".")[:-1])
-#         lst = img.split(" ")
-#         images[i] = " ".join(lst[:-1]),lst[-1],images[i]
-#     count=0
-#     for img,lang,original in images:
-#         if img and img!="default":
-#             lang = getLanguage(lang.lower())
-#             book = Book.objects.filter(title__icontains=img,language__icontains=lang)
-#             for bk in book:
-#                 bk.picture=original
-#                 bk.save()
-#             count+=len(book)
-#     return Response({"status":"sucess","count":count})
 
 def manageStock(bookDetails):
     books = books_by_ids(bookDetails.keys(),obj=True)
@@ -153,4 +112,76 @@ def manageStock(bookDetails):
         bk.save()
     serializer = BookSerializer(books,many=True)
     return True,{"data":serializer.data}
+
+@api_view(["put"])
+@verify_manager("books")
+def create_book(request):
+    try:
+        title = request.data.get("title",None)
+        price = request.data.get("price",None)
+        author = request.data.get("author",None)
+        language = request.data.get("language",None)
+        discount = request.data.get("discount",None)
+        dimension = request.data.get("dimension",None)
+        weight = request.data.get("weight",None)
+        description = request.data.get("description",None)
+        picture = request.FILES.get("picture",None)
+        delivery_factor = request.data.get("delivery_factor",1)
+
+        if not (title and price  and language and dimension and weight and description and picture):
+            return Response({"status":"fail","message":"Invalid request"},status=400)
+        
+        book = Book(title=title,price=price,author=author,language=language,discount=discount,dimension=dimension,weight=weight,description=description,picture=picture,delivery_factor=delivery_factor)
+        book.save()
+        return Response({"status":"success","bookId":book.bookId},status=201)
+    except Exception as e:
+        return Response({"status":"fail","message":"Internal server error"},status=500)
+
+class BookDetails(APIView):
+    @verify_manager("books")
+    def post(self,request,bookId):
+        try:
+            title = request.data.get("title",None)
+            price = request.data.get("price",None)
+            author = request.data.get("author",None)
+            language = request.data.get("language",None)
+            discount = request.data.get("discount",None)
+            dimension = request.data.get("dimension",None)
+            weight = request.data.get("weight",None)
+            description = request.data.get("description",None)
+            picture = request.FILES.get("picture",None)
+            delivery_factor = request.data.get("delivery_factor",1)
+            if not (title and price  and language and dimension and weight and description and picture):
+                return Response({"status":"fail","message":"Invalid request"},status=400)
+            
+            book = Book.objects.filter(id=Book.getId(bookId))
+            if not book:
+                return Response({"status":"fail","message":"Book not found"},status=404)
+            book = book.first()
+            book.title = title
+            book.price = price
+            book.author = author
+            book.language = language
+            book.discount = discount
+            book.dimension = dimension
+            book.weight = weight
+            book.description = description
+            book.picture = picture
+            book.delivery_factor = delivery_factor
+            book.save()
+            return Response({"status":"success"},status=200)
+        except Exception as e:
+            return Response({"status":"fail","message":"Internal Server Error"},status=500)
+
+    @verify_manager("books")
+    def delete(self,request,bookId):
+        try:
+            book = Book.objects.filter(id=Book.getId(bookId))
+            if not book:
+                return Response({"status":"fail","message":"Book not found"},status=404)
+            book.delete()
+            return Response({"status":"success"},status=200)
+        except Exception as e:
+            return Response({"status":"fail","message":"Internal Server Error"},status=500)
+
 

@@ -36,7 +36,6 @@ def login(request):
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(str(time.time() + user.id).encode("utf-8"), salt)
     token = Token(user=user,token=hashed.decode("utf-8"),created_on=datetime.datetime.now(datetime.timezone.utc))
-    user.save()
     token.save()
     serializer = UserSerializer(user)
     response = serializer.data
@@ -364,3 +363,63 @@ def resetPasswordRequest(request):
         return Response({"status":"success","userId":user.id},status=200)
     except Exception as e:
         return Response({"status":"fail","message":"Internal Server Error"},status=500)
+
+@api_view(["post"])
+def send_otp(request):
+    # try:
+        isVerified = request.data.get("isVerified",None)
+        if isVerified==None:
+            return Response({"status":"fail","message":"Invalid request"},status=400)
+        if isVerified:
+            userId = request.data.get("userId",None)
+            if not userId:
+                return Response({"status":"fail","message":"Invalid request"},status=400)
+            user = User.objects.filter(id=userId)
+            if not user:
+                return Response({"status":"fail","message":"No record found"},status=400)
+            user = user.first()
+            user.otp=random.randint(10000, 99999)
+            user.generated_on = datetime.datetime.now(datetime.timezone.utc)
+
+            send_html_mail(
+                "Reset Password verification",
+                {"template": "mail/reset_password.html", "data": {"otp": user.otp}},
+                [user.email],
+            )
+            send_sms(
+                "Reset Password verification",
+                {"type": "Reset Password", "params": {"otp": user.otp}},
+                [user.mobile],
+            )
+            user.save()
+            return Response({"status":"success"},status=200)
+
+        else:
+            mobile=request.data.get("mobile",None)
+            email = request.data.get("email",None)
+            if not mobile or not email:
+                return Response({"status":"fail","message":"Invalid request"},status=400)
+            user = UserUnverified.objects.filter(Q(mobile=mobile)|Q(email=email))
+            if not user:
+                return Response({"status":"fail","message":"No record found"},status=400)
+            user = user.first()
+            user.mobileOtp=random.randint(10000, 99999)
+            user.emailOtp = random.randint(10000, 99999)
+            user.otpGenTime = datetime.datetime.now(datetime.timezone.utc)
+            send_html_mail(
+                "otp verification",
+                {"template": "mail/otp.html", "data": {"otp": user.emailOtp}},
+                [email],
+            )
+            send_sms(
+                "otp verification",
+                {"type": "Account Verification", "params": {"otp": user.mobileOtp}},
+                [mobile],
+            )
+            user.save()
+            return Response({"status":"success"},status=200)
+    # except Exception as e:
+    #     return Response({"status":"fail","message":"Could not send otp"},status=500)
+
+
+

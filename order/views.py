@@ -8,9 +8,12 @@ from mailService import send_html_mail, send_sms
 from order.serializers import OrderSerializer
 import time
 from user.views import verify_user, get_user
-
+from manager.views import verify_manager
+import datetime
+import pytz
+from nimbus.create_order import create_order
 # Create your views here.
-
+timezone = pytz.timezone("Asia/Kolkata")
 @api_view(["PUT"])
 def make_order(request):
     try:
@@ -43,6 +46,7 @@ def make_order(request):
         for bk in books:
             bk["qty"] = details[str(bk["book_id"])]
         totalAmount = float(amount)+float(delivery_charges)
+        create_order(order,books)
         trackingUrl = f"https://fortuneshelf.com/trackorder/?orderId={order.orderId}"
         send_html_mail("Order Confirmation",{"template":"mail/order.html","data":{"name":first_name+" "+last_name,"amount":float(amount),"totalAmount":totalAmount,"order_id":order.orderId,"deliveryCharges":float(delivery_charges),"orderDetails":books,"url":trackingUrl}} , [email])
         send_sms(
@@ -83,3 +87,40 @@ def get_orders(request):
         response.append(order)
     
     return Response(response,status=200)
+
+
+@api_view(["get"])
+@verify_manager("orders")
+def get_all_orders(request):
+    start_date = request.query_params.get("start",None)
+    end_date = request.query_params.get("end",None)
+    if not start_date or not end_date:
+        return Response({"status":"fail","message":"Invalid request"},status=400)
+    start_date = timezone.localize(datetime.datetime.strptime(start_date,"%Y-%m-%d %H:%M:%S"))
+    end_date = timezone.localize(datetime.datetime.strptime(end_date,"%Y-%m-%d %H:%M:%S"))
+    orders = Order.objects.filter(date__gte=start_date,date__lte=end_date).order_by("-date")
+    serializer = OrderSerializer(orders,many=True)
+    response=[]
+    for order in serializer.data:
+        order['status'] = OrderStatus(order['status']).name
+        response.append(order)
+    
+    return Response({"count":len(response),"data":response},status=200)
+
+
+@api_view(["post"])
+@verify_manager("orders")
+def updateOrderStatus(request,orderId):
+    try:
+        status = request.data.get("status",None)
+        if not status:
+            return Response({"status":"fail","message":"Invalid request"},status=400)
+        order = Order.objects.filter(id=Order.getId(orderId))
+        if not order:
+            return Response({"status":"fail","message":"Order not found"},status=404)
+        order.status=OrderStatus[status].value
+        order.save()
+        return Response({"status":"successfull"},status=200)
+    except Exception as e:
+        return Response({"status":"fail","message":"Internal server error"},status=500)
+

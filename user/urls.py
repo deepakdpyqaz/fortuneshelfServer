@@ -9,5 +9,6 @@ urlpatterns=[
     path("billing_profile",views.ProfileBilling.as_view()),
     path("billing_profile/<int:id>",views.ProfileBillingDetails.as_view()),
     path("profile",views.update_user),
-    path("reset_password_request",views.resetPasswordRequest)
+    path("reset_password_request",views.resetPasswordRequest),
+    path("send_otp",views.send_otp),
 ]

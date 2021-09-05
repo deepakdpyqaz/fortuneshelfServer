@@ -34,6 +34,7 @@ ALLOWED_HOSTS = ["app.fortuneshelf.com","fortuneshelf-load-balancer-1472405162.u
 # Application definition
 
 INSTALLED_APPS = [
+    'manager.apps.ManagerConfig',
     'order.apps.OrderConfig',
     'book.apps.BookConfig',
     'user.apps.UserConfig',
@@ -143,12 +144,17 @@ STATICFILES_DIRS=[
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Media setup
+
 MEDIA_ROOT=os.path.join(BASE_DIR,"media")
 MEDIA_URL="/media/"
 
+
+# CORS
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ORIGIN_WHITELIST = (
   'http://localhost:3000',
+  'http://localhost:5000',
   'http://192.168.43.190:3000',
   "https://www.fortuneshelf.com",
   "http://www.fortuneshelf.com",
@@ -157,15 +163,27 @@ CORS_ORIGIN_WHITELIST = (
 )
 
 
+# EMAIL
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST_USER = 'deepakdpywsx@gmail.com'
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_PASSWORD = 'selfish@new'
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_MAIL")
 
 
+# AWS
 AWS_ACCESS_KEY_ID = os.getenv("AWSAccessKeyId")
 AWS_SECRET_KEY = os.getenv("AWSSecretKey")
 REGION_NAME = os.getenv("region_name")
+
+# REST FRAMEWORK
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+    )
+}
+
+# NIMBUS 
+NP_API_KEY = os.getenv("NP_API_KEY")

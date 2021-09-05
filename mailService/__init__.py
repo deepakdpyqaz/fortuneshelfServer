@@ -9,15 +9,16 @@ import boto3
 
 
 class EmailThread(threading.Thread):
-    def __init__(self, subject,plain_message, html_message, recipient_list):
+    def __init__(self, subject,plain_message, html_message, recipient_list,sender=settings.DEFAULT_FROM_EMAIL):
         self.subject = subject
         self.recipient_list = recipient_list
         self.plain_message = plain_message
         self.html_message = html_message
+        self.sender = sender
         threading.Thread.__init__(self)
 
     def run (self):
-        send_mail(self.subject,self.plain_message, settings.DEFAULT_FROM_EMAIL, self.recipient_list,html_message=self.html_message)
+        send_mail(self.subject,self.plain_message, self.sender, self.recipient_list,html_message=self.html_message)
 
 class SmsThread(threading.Thread):
     def __init__(self,subject,message,recipient):
@@ -53,6 +54,7 @@ def message_generator(key,params):
     return messages.get(key,"")
 
 def send_sms(subject,message,recipient_list):
+    return
     message = message_generator(message['type'], message['params'])
     for recipient in recipient_list:
         recipient="+91"+recipient
