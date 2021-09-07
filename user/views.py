@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from rest_framework.decorators import api_view
 from user.models import User, UserUnverified, BillingProfile, Token
 from user.serializers import UserSerializer, BillingProfileSerializer
@@ -366,7 +366,7 @@ def resetPasswordRequest(request):
 
 @api_view(["post"])
 def send_otp(request):
-    # try:
+    try:
         isVerified = request.data.get("isVerified",None)
         if isVerified==None:
             return Response({"status":"fail","message":"Invalid request"},status=400)
@@ -418,8 +418,7 @@ def send_otp(request):
             )
             user.save()
             return Response({"status":"success"},status=200)
-    # except Exception as e:
-    #     return Response({"status":"fail","message":"Could not send otp"},status=500)
-
+    except Exception as e:
+        return Response({"status":"fail","message":"Could not send otp"},status=500)
 
 

@@ -34,6 +34,7 @@ ALLOWED_HOSTS = ["app.fortuneshelf.com","fortuneshelf-load-balancer-1472405162.u
 # Application definition
 
 INSTALLED_APPS = [
+    'payment.apps.PaymentConfig',
     'manager.apps.ManagerConfig',
     'order.apps.OrderConfig',
     'book.apps.BookConfig',
@@ -187,3 +188,14 @@ REST_FRAMEWORK = {
 
 # NIMBUS 
 NP_API_KEY = os.getenv("NP_API_KEY")
+
+
+# PAYU
+MERCHANT_KEY=os.getenv("MERCHANT_KEY")
+MERCHANT_SALT = os.getenv("MERCHANT_SALT")
+# MERCHANT_KEY="vUWFZt"
+# MERCHANT_SALT=""
+SURL = os.getenv("SURL")
+FURL = os.getenv("FURL")
+CURL = os.getenv("CURL")
+RURL = os.getenv("RURL")

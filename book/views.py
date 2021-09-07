@@ -102,14 +102,15 @@ def books_by_ids(bookids,obj=False,record=True):
 
 
 
-def manageStock(bookDetails):
+def manageStock(bookDetails,deduct=True):
     books = books_by_ids(bookDetails.keys(),obj=True)
     for bk in books:
         if bk.max_stock<bookDetails[str(bk.bookId)]:
             return False,{"message":f"{bk.title} out of stock"}
-    for bk in books:
-        bk.max_stock = bk.max_stock-bookDetails[str(bk.bookId)]
-        bk.save()
+    if deduct:
+        for bk in books:
+            bk.max_stock = bk.max_stock-bookDetails[str(bk.bookId)]
+            bk.save()
     serializer = BookSerializer(books,many=True)
     return True,{"data":serializer.data}
 

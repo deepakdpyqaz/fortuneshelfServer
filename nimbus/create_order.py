@@ -41,7 +41,6 @@ class NimbusCreateOrderThread(threading.Thread):
             if r["status"]:
                 self.order.trackingId=r["data"]
                 self.order.save()
-                print(self.order.trackingId)
             else:
                 print("Error in code")
 

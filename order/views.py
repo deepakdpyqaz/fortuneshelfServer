@@ -12,6 +12,7 @@ from manager.views import verify_manager
 import datetime
 import pytz
 from nimbus.create_order import create_order
+from payment.models import Payment,PaymentStatus
 # Create your views here.
 timezone = pytz.timezone("Asia/Kolkata")
 @api_view(["PUT"])
@@ -31,30 +32,35 @@ def make_order(request):
         delivery_charges = request.data["delivery_charges"]
         details = request.data["details"]
 
-        
+
         order = Order(first_name=first_name,last_name=last_name,mobile=mobile,email=email,paymentMode=paymentMode,pincode=pincode,state=state,city=city,address=address,district=district,amount=amount,delivery_charges=delivery_charges,details=details)
         if "authorization" in request.headers:
             op_status,user = get_user(request.headers.get("authorization",""))
             if op_status:
                 order.userId=user
-        order.save()
         op_status,op_res = manageStock(details)
         if not op_status:
             return Response(op_res,400)
+        order.save()
         books = op_res["data"]
         orderItems = {}
         for bk in books:
             bk["qty"] = details[str(bk["book_id"])]
         totalAmount = float(amount)+float(delivery_charges)
-        create_order(order,books)
-        trackingUrl = f"https://fortuneshelf.com/trackorder/?orderId={order.orderId}"
-        send_html_mail("Order Confirmation",{"template":"mail/order.html","data":{"name":first_name+" "+last_name,"amount":float(amount),"totalAmount":totalAmount,"order_id":order.orderId,"deliveryCharges":float(delivery_charges),"orderDetails":books,"url":trackingUrl}} , [email])
-        send_sms(
-            "Order Confirmation",
-            {"type": "Order", "params": {"name":first_name+" "+last_name,"orderId": order.orderId,"amount":totalAmount,"url":trackingUrl}},
-            [mobile],
-        )
-        return Response({"status":"success","orderId":order.orderId},status=200)
+        if paymentMode=='C' and order.userId:
+            create_order(order,books)
+            trackingUrl = f"https://fortuneshelf.com/trackorder/?orderId={order.orderId}"
+            send_html_mail("Order Confirmation",{"template":"mail/order.html","data":{"name":first_name+" "+last_name,"amount":float(amount),"totalAmount":totalAmount,"order_id":order.orderId,"deliveryCharges":float(delivery_charges),"orderDetails":books,"url":trackingUrl}} , [email])
+            send_sms(
+                "Order Confirmation",
+                {"type": "Order", "params": {"name":first_name+" "+last_name,"orderId": order.orderId,"amount":totalAmount,"url":trackingUrl}},
+                [mobile],
+            )
+            return Response({"status":"success","orderId":order.orderId},status=200)
+        else:
+            payment = Payment(order=order,transactionId=None,status=PaymentStatus.pending.value)
+            payment.save()
+            return Response({"status":"success","orderId":order.orderId},status=200)
     except Exception as e:
         return Response({"status":"fail","message":"Order not placed"},status=500)
 

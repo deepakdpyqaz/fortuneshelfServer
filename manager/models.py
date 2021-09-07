@@ -7,9 +7,10 @@ class Manager(models.Model):
     email = models.EmailField(max_length=100)
     _password = models.CharField(max_length=100,null=True)
     mobile = models.CharField(max_length=12)
-    books = models.BooleanField(default=0)
-    orders = models.BooleanField(default=0)
-    users = models.BooleanField(default=0)
+    books = models.BooleanField(default=False)
+    orders = models.BooleanField(default=False)
+    users = models.BooleanField(default=False)
+    payment=models.BooleanField(default=False)
     otp = models.IntegerField(default=0)
     generated_on = models.DateTimeField(auto_now_add=True)
     @property
