@@ -120,19 +120,21 @@ def create_book(request):
     try:
         title = request.data.get("title",None)
         price = request.data.get("price",None)
-        author = request.data.get("author",None)
         language = request.data.get("language",None)
         discount = request.data.get("discount",None)
-        dimension = request.data.get("dimension",None)
+        length = request.data.get("length",None)
+        breadth = request.data.get("breadth",None)
+        height = request.data.get("height",None)
         weight = request.data.get("weight",None)
         description = request.data.get("description",None)
         picture = request.FILES.get("picture",None)
         delivery_factor = request.data.get("delivery_factor",1)
-
-        if not (title and price  and language and dimension and weight and description and picture):
+        stock = request.data.get('max_stock',None)
+        category = request.data.get("category",None)
+        if not (title and price  and language and length and breadth and height and weight and description and picture and stock):
             return Response({"status":"fail","message":"Invalid request"},status=400)
         
-        book = Book(title=title,price=price,author=author,language=language,discount=discount,dimension=dimension,weight=weight,description=description,picture=picture,delivery_factor=delivery_factor)
+        book = Book(title=title,price=price,language=language,discount=discount,length=length,breadth=breadth,height=height,weight=weight,description=description,picture=picture,delivery_factor=delivery_factor,max_stock=stock,category=category)
         book.save()
         return Response({"status":"success","bookId":book.bookId},status=201)
     except Exception as e:
@@ -147,12 +149,16 @@ class BookDetails(APIView):
             author = request.data.get("author",None)
             language = request.data.get("language",None)
             discount = request.data.get("discount",None)
-            dimension = request.data.get("dimension",None)
+            length = request.data.get("length",None)
+            breadth = request.data.get("breadth",None)
+            height = request.data.get("height",None)
             weight = request.data.get("weight",None)
             description = request.data.get("description",None)
+            stock = request.data.get("max_stock",None)
+            category = request.data.get("category",None)
             picture = request.FILES.get("picture",None)
             delivery_factor = request.data.get("delivery_factor",1)
-            if not (title and price  and language and dimension and weight and description and picture):
+            if not (title and price  and language and length and breadth and height and weight and description and stock):
                 return Response({"status":"fail","message":"Invalid request"},status=400)
             
             book = Book.objects.filter(id=Book.getId(bookId))
@@ -164,11 +170,16 @@ class BookDetails(APIView):
             book.author = author
             book.language = language
             book.discount = discount
-            book.dimension = dimension
+            book.length = length
+            book.breadth = breadth
+            book.height = height
             book.weight = weight
             book.description = description
-            book.picture = picture
+            if picture:
+                book.picture = picture
             book.delivery_factor = delivery_factor
+            book.max_stock = stock
+            book.category = category
             book.save()
             return Response({"status":"success"},status=200)
         except Exception as e:
@@ -186,3 +197,52 @@ class BookDetails(APIView):
             return Response({"status":"fail","message":"Internal Server Error"},status=500)
 
 
+@api_view(["GET"])
+@verify_manager("books")
+def allBooks(request):
+    books = Book.objects.values_list("id","title").order_by("-id")
+    response = [{"bookId":book[0]+Book.START,"title":book[1]} for book in books]
+    return Response({"status":"success","data":response},status=200)
+
+@api_view(["GET"])
+def runScript(request):
+    books = Book.objects.all()
+    for book in books:
+        book.dimension = book.dimension.replace(chr(215),"x")
+        lst = list(map(lambda x:x.strip(),book.dimension[:-2:].split("x")))
+        if(len(lst)>0 and lst[0].isdecimal()):
+            book.length=lst[0]
+        if(len(lst)>1 and lst[1].isdecimal()):
+            book.breadth=lst[1]
+        if(len(lst)>2 and lst[2].isdecimal()):
+            book.height=lst[2]
+        book.save()
+    return Response({"status":"Done"},status=200)
+
+@api_view(["GET"])
+def update_books(request):
+    success=0
+    fail=0
+    with open("data2.csv" ,newline='') as csvfile:
+        reader = csv.reader(csvfile, delimiter=',', quotechar='|')
+        i=0
+        for row in reader:
+            if i==0:
+                i+=1
+                continue
+            try:
+                id,name,language,weight,price,discount,delivery_factor,max_stock=row
+                book = Book.objects.get(id=id)
+                if book:
+                    book.title = name
+                    book.language = language.capitalize()
+                    book.weight=weight
+                    book.price = price
+                    book.discount=discount
+                    book.delivery_factor=delivery_factor
+                    book.max_stock=max_stock
+                    book.save()
+                    success+=1
+            except Exception as e:
+                fail+=1
+    return Response({"total":success+fail,"success":success,"fail":fail},status=200)

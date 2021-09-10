@@ -49,12 +49,14 @@ def message_generator(key,params):
         "Account Verification": "Welcome to FortuneShelf. Use OTP {} to verify your account".format(params.get("otp",None)),  
         "Verification":"Use OTP {} to verify your account".format(params.get("otp",None)),
         "Reset Password":"We have recieved the request to reset your password. Use OTP {} to reset your password. If you have not made this request then contact enquiry@fortuneshelf.com".format(params.get("otp",None)),
-        "Order":"Hi, {} your order with order id {} for Rs. {} is placed successfully, you can track your order using the link {} thank you.".format(params.get("name",None),params.get("orderId",None),params.get("amount",None),params.get("url",None))
+        "Order":"Hi, {} your order with order id {} for Rs. {} is placed successfully, you can track your order using the link {} thank you.".format(params.get("name",None),params.get("orderId",None),params.get("amount",None),params.get("url",None)),
+        "Invitation":"Welcome to FortuneShelf. Use your email or phone as username and password: {} to login to your account".format(params.get("password"))
     }
     return messages.get(key,"")
 
 def send_sms(subject,message,recipient_list):
-    return
+    if settings.DEBUG:
+        return
     message = message_generator(message['type'], message['params'])
     for recipient in recipient_list:
         recipient="+91"+recipient

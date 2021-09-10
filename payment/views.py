@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from rest_framework.decorators import api_view
 from django.conf import settings
-from order.models import Order
+from order.models import Order, OrderStatus, Coupon
 from payment.models import PaymentStatus, Payment
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.response import Response
@@ -10,7 +10,12 @@ from hashlib import sha512
 from nimbus.create_order import create_order
 from mailService import send_html_mail, send_sms
 from book.views import books_by_ids, manageStock
+from manager.views import verify_manager
+import pytz
+import datetime
 
+
+timezone = pytz.timezone("Asia/Kolkata")
 
 # Create your views here.
 PRODUCTINFO = "FortuneShelf Books"
@@ -74,7 +79,7 @@ def getMerchantKey(request):
     if not order:
         return Response({"status":"fail","message":"Order not found"},status=400)
     order = order.first()
-    hash_dict={"firstname":order.first_name,"txnid":orderId,"amount":order.amount+order.delivery_charges,"email":email,"productinfo":PRODUCTINFO}
+    hash_dict={"firstname":order.first_name,"txnid":orderId,"amount":order.amount+order.delivery_charges-order.discount,"email":email,"productinfo":PRODUCTINFO}
     hash = PAYU.generate_hash(hash_dict)
     if order.payment.first().status == PaymentStatus.pending.value and order.mobile == mobile and order.email==email:
         return Response({"status":"success","merchant_key":settings.MERCHANT_KEY,"merchant_salt":settings.MERCHANT_SALT,"curl":settings.CURL,"furl":settings.FURL,"surl":settings.SURL,"hash":hash,"productinfo":PRODUCTINFO})
@@ -106,8 +111,9 @@ def success(request):
         payment = order.payment.first()
         payment.status = PaymentStatus.success.value
         payment.transactionId = res.get("mihpayid")
+        payment.mode = res.get("mode")
         payment.save()
-        op_status,op_res = manageStock(order.details)
+        op_status,op_res = manageStock(order.details,False)
         if not op_status:
             return Response(op_res,400)
         order.save()
@@ -115,10 +121,10 @@ def success(request):
         orderItems = {}
         for bk in books:
             bk["qty"] = order.details[str(bk["book_id"])]
-        totalAmount = float(order.amount)+float(order.delivery_charges)
+        totalAmount = float(order.amount)+float(order.delivery_charges)-float(order.discount)
         create_order(order,books)
         trackingUrl = f"https://fortuneshelf.com/trackorder/?orderId={order.orderId}"
-        send_html_mail("Order Confirmation",{"template":"mail/order.html","data":{"name":order.first_name+" "+order.last_name,"amount":float(order.amount),"totalAmount":totalAmount,"order_id":order.orderId,"deliveryCharges":float(order.delivery_charges),"orderDetails":books,"url":trackingUrl}} , [order.email])
+        send_html_mail("Order Confirmation",{"template":"mail/order.html","data":{"name":order.first_name+" "+order.last_name,"amount":float(order.amount),"discount":float(order.discount),"totalAmount":totalAmount,"order_id":order.orderId,"deliveryCharges":float(order.delivery_charges),"orderDetails":books,"url":trackingUrl}} , [order.email])
         send_sms(
             "Order Confirmation",
             {"type": "Order", "params": {"name":order.first_name+" "+order.last_name,"orderId": order.orderId,"amount":totalAmount,"url":trackingUrl}},
@@ -130,9 +136,70 @@ def success(request):
         return redirect(settings.RURL+f"?orderId={order.orderId}")
 @csrf_exempt
 def fail(request):
-    return redirect(settings.RURL)
+    res = {}
+    for i in request.POST.keys():
+        res[i]=request.POST[i]
+    if PAYU.check_hash(res):
+        order = Order.objects.filter(id=Order.getId(res.get("txnid")))
+        if not order:
+            return redirect(settings.RURL+f"?orderId={order.orderId}")
+        order=order.first()
+        payment = order.payment.first()
+        payment.status = PaymentStatus.fail.value
+        payment.error = res.get("error_message")
+        order.status=OrderStatus.failed.value
+        order.save()
+        payment.save()
+    return redirect(settings.RURL+f"?orderId={order.orderId}")
 
 @csrf_exempt
 def cancel(request):
-    return redirect(settings.RCURL)
+    res = {}
+    for i in request.POST.keys():
+        res[i]=request.POST[i]
+    if PAYU.check_hash(res):
+        order = Order.objects.filter(id=Order.getId(res.get("txnid")))
+        if not order:
+            return redirect(settings.RURL+f"?orderId={order.orderId}")
+        order=order.first()
+        payment = order.payment.first()
+        payment.status = PaymentStatus.fail.value
+        payment.error = res.get("error_message")
+        order.status=OrderStatus.failed.value
+        order.save()
+        payment.save()
+    return redirect(settings.RURL+f"?orderId={order.orderId}")
 
+
+@api_view(["get"])
+@verify_manager("payment")
+def get_all_payments(request):
+    start_date = request.query_params.get("start",None)
+    end_date = request.query_params.get("end",None)
+    if not start_date or not end_date:
+        return Response({"status":"fail","message":"Invalid request"},status=400)
+    start_date = timezone.localize(datetime.datetime.strptime(start_date.split("T")[0],"%Y-%m-%d"))
+    end_date = timezone.localize(datetime.datetime.strptime(end_date.split("T")[0],"%Y-%m-%d"))
+    payments = Payment.objects.filter(date__gte=start_date,date__lte=end_date).order_by("-date")
+    response=[]
+    for payment in payments:    
+       response.append({
+           "transactionId":payment.transactionId,
+           "orderId":payment.order.orderId,
+           "status":PaymentStatus(payment.status).name,
+           "date":payment.date,
+           "error":payment.error,
+           "mode":payment.mode
+       })
+    
+    return Response({"count":len(response),"data":response},status=200)
+
+@api_view(["get"])
+def applyCoupon(request,coupon):
+    discountCoupon = Coupon.objects.filter(coupon=coupon)
+    if not discountCoupon:
+        return Response({"status":"fail","message":"Coupon Not Found"},status=200)
+    discountCoupon = discountCoupon.first()
+    if not discountCoupon.isValid:
+        return Response({"status":"fail","message":"Coupon Expired"},status=200)
+    return Response({"status":"success","coupon":discountCoupon.coupon,"discount":discountCoupon.discount,"coupon_id":discountCoupon.id},status=200)

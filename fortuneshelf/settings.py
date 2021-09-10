@@ -26,8 +26,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-h*3*bkdxfh-sm#6(om$q5!f5jx!cp0vkty+8tuw_ugsv9y(hxm'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
+if os.getenv("environment")=="dev":
+    DEBUG = True
+else:
+    DEBUG = False
 ALLOWED_HOSTS = ["app.fortuneshelf.com","fortuneshelf-load-balancer-1472405162.us-east-1.elb.amazonaws.com","localhost","127.0.0.1","192.168.43.190"]
 
 

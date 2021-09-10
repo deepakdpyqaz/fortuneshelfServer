@@ -1,6 +1,7 @@
 from django.db import models
 import enum
 from user.models import User
+# Create your models here.
 class OrderStatus(enum.Enum):
     pending = 0
     packed = 1
@@ -8,9 +9,17 @@ class OrderStatus(enum.Enum):
     delivered = 3
     failed = -1
 
-# Create your models here.
+class Coupon(models.Model):
+    coupon = models.CharField(max_length=50)
+    discount = models.FloatField(default=0.0)
+    isValid = models.BooleanField(default=True)
+    usage = models.IntegerField()
+    generated_on = models.DateTimeField(auto_now_add=True)
+    def __str__(self):
+        return self.coupon
 class Order(models.Model):
     userId = models.ForeignKey(User,null=True,blank=True,on_delete = models.SET_NULL)
+    coupon = models.ForeignKey(Coupon,null=True,blank=True,on_delete=models.SET_NULL)
     first_name=models.CharField(max_length=50)
     last_name=models.CharField(max_length=50,default="")
     mobile = models.CharField(max_length=15)
@@ -24,7 +33,7 @@ class Order(models.Model):
     delivery_charges = models.FloatField()
     details = models.JSONField()
     trackingId = models.CharField(max_length=30,null=True)
-    trackingUrl = models.CharField(max_length=100,null=True)
+    discount = models.FloatField(default=0,blank=True,null=True)
     status = models.IntegerField(default=OrderStatus.pending.value)
     date = models.DateTimeField(auto_now_add=True, blank=True)
     PAYMENTMODE = (

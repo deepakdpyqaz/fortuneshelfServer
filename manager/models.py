@@ -11,6 +11,7 @@ class Manager(models.Model):
     orders = models.BooleanField(default=False)
     users = models.BooleanField(default=False)
     payment=models.BooleanField(default=False)
+    coupon = models.BooleanField(default=False)
     otp = models.IntegerField(default=0)
     generated_on = models.DateTimeField(auto_now_add=True)
     @property
