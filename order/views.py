@@ -189,7 +189,6 @@ def get_order_details(request,orderId):
                 response["mode"]=payment.mode
         return Response(response,status=200)
     except Exception as e:
-        print(e)
         return Response({"status":"fail","message":"Internal Server Error"},status=500)
 
 @api_view(["GET"])
