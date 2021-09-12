@@ -56,14 +56,14 @@ def make_order(request):
         server_amount = 0
         server_weight = 0
         for bk in books:
-            server_amount+=bk["price"]-bk["discount"]*bk["price"]/100
-            server_weight+=bk["weight"]
             bk["qty"] = details[str(bk["book_id"])]
+            server_amount+= int(bk["qty"])*math.ceil((bk["price"]-(bk["discount"]*bk["price"])/100))
+            server_weight+=int(bk["qty"])*bk["weight"]
         
         server_total_amount = float(server_amount)+float(math.ceil(server_weight/1000)*70)
         totalAmount = float(amount)+float(delivery_charges)
         if abs(totalAmount-server_total_amount)>0.001:
-            return Response({"status":"fail","message":"Bad Request"},status=400)
+            return Response({"status":"fail","message":"Cart not updated"},status=409)
         if coupon:
             order.discount = math.floor(totalAmount*(coupon.discount)/100)
         else:
@@ -210,7 +210,6 @@ def create_coupon(request):
         discount_coupon.save()
         return Response({"status":"success"},status=201)
     except Exception as e:
-        print(e)
         return Response({"status":'fail',"message":"Internal server Error"},status=500)
 
 @api_view(["delete"])

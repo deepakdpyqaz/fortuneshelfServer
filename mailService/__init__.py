@@ -30,7 +30,7 @@ class SmsThread(threading.Thread):
     def run(self):
         client = boto3.client('sns',
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_KEY,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
             region_name=settings.REGION_NAME
         )
         response = client.publish(

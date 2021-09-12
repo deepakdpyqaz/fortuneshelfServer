@@ -123,6 +123,7 @@ def profile(request,managerId):
                 books = request.data.get("books",False)
                 payment = request.data.get('payment',False)
                 orders = request.data.get("orders",False)
+                coupon = request.data.get("coupon",False)
                 if not first_name or not last_name:
                     return Response({"status":"success","message":"Invalid Request"},status=400)
                 manager.first_name =first_name
@@ -132,6 +133,7 @@ def profile(request,managerId):
                     manager.books=books
                     manager.payment=payment
                     manager.orders=orders
+                    manager.coupon=coupon
                 manager.save()
                 return Response({"status":"success"},status=200)
     return Response({"status":"fail"},status=400)
@@ -221,5 +223,4 @@ def addManager(request):
 
         return Response({"status":"success"},status=200)
     except Exception as e:
-        print(e)
         return Response({"status":"fail","message":"Internal Server Error"},status=500)

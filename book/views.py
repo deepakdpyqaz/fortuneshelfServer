@@ -58,6 +58,7 @@ def getBooksFromDb(page_number,per_page,order_by,desc=False,low_price=None,high_
         filters["price__gte"]=low_price
     if high_price:
         filters["price__lte"] = high_price
+
     books = Book.objects.filter(**filters).order_by(order_by)[(page_number-1)*per_page:page_number*per_page-1:]
     serializer = BookSerializer(books,many=True)
     return serializer.data
@@ -134,7 +135,7 @@ def create_book(request):
         if not (title and price  and language and length and breadth and height and weight and description and picture and stock):
             return Response({"status":"fail","message":"Invalid request"},status=400)
         
-        book = Book(title=title,price=price,language=language,discount=discount,length=length,breadth=breadth,height=height,weight=weight,description=description,picture=picture,delivery_factor=delivery_factor,max_stock=stock,category=category)
+        book = Book(title=title,price=price,language=language.lower(),discount=discount,length=length,breadth=breadth,height=height,weight=weight,description=description,picture=picture,delivery_factor=delivery_factor,max_stock=stock,category=category)
         book.save()
         return Response({"status":"success","bookId":book.bookId},status=201)
     except Exception as e:
@@ -206,6 +207,7 @@ def allBooks(request):
 
 @api_view(["GET"])
 def runScript(request):
+    return 
     books = Book.objects.all()
     for book in books:
         book.dimension = book.dimension.replace(chr(215),"x")
@@ -219,30 +221,11 @@ def runScript(request):
         book.save()
     return Response({"status":"Done"},status=200)
 
+
 @api_view(["GET"])
 def update_books(request):
-    success=0
-    fail=0
-    with open("data2.csv" ,newline='') as csvfile:
-        reader = csv.reader(csvfile, delimiter=',', quotechar='|')
-        i=0
-        for row in reader:
-            if i==0:
-                i+=1
-                continue
-            try:
-                id,name,language,weight,price,discount,delivery_factor,max_stock=row
-                book = Book.objects.get(id=id)
-                if book:
-                    book.title = name
-                    book.language = language.capitalize()
-                    book.weight=weight
-                    book.price = price
-                    book.discount=discount
-                    book.delivery_factor=delivery_factor
-                    book.max_stock=max_stock
-                    book.save()
-                    success+=1
-            except Exception as e:
-                fail+=1
-    return Response({"total":success+fail,"success":success,"fail":fail},status=200)
+    books = Book.objects.all()
+    for book in books:
+        book.language = book.language.lower()
+        book.save()
+    return Response({"status":"fail"},status=200)

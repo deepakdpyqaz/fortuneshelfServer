@@ -134,24 +134,43 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
+USE_S3 = True   
+# AWS
+AWS_ACCESS_KEY_ID = os.getenv("AWSAccessKeyId")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWSSecretKey")
+if USE_S3:
+    REGION_NAME = os.getenv("region_name")
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+    AWS_LOCATION = 'static'
+    STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_LOCATION}/'
+    STATICFILES_STORAGE = 'fortuneshelf.storage_backends.StaticStorage'
+      # s3 public media settings
+    PUBLIC_MEDIA_LOCATION = 'media'
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{PUBLIC_MEDIA_LOCATION}/'
+    DEFAULT_FILE_STORAGE = 'fortuneshelf.storage_backends.PublicMediaStorage'
+else:
+    STATIC_URL = '/static/'
 
-STATIC_URL = '/static/'
+    STATIC_ROOT=os.path.join(BASE_DIR,"assets")
 
-STATIC_ROOT="/assets"
+    STATICFILES_DIRS=[
+        os.path.join(BASE_DIR,"static")
+    ]
+    MEDIA_ROOT=os.path.join(BASE_DIR,"media")
+    MEDIA_URL="/media/"
 
-STATICFILES_DIRS=[
-    os.path.join(BASE_DIR,"static")
-]
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Media setup
 
-MEDIA_ROOT=os.path.join(BASE_DIR,"media")
-MEDIA_URL="/media/"
 
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS
 CORS_ORIGIN_ALLOW_ALL = False
@@ -176,10 +195,6 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_MAIL")
 
 
-# AWS
-AWS_ACCESS_KEY_ID = os.getenv("AWSAccessKeyId")
-AWS_SECRET_KEY = os.getenv("AWSSecretKey")
-REGION_NAME = os.getenv("region_name")
 
 # REST FRAMEWORK
 REST_FRAMEWORK = {
