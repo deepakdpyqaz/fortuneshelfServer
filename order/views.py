@@ -14,6 +14,7 @@ import pytz
 from nimbus.create_order import create_order
 from payment.models import Payment,PaymentStatus
 from user.serializers import UserSerializer
+from django.db.models import Q
 import math
 # Create your views here.
 timezone = pytz.timezone("Asia/Kolkata")
@@ -58,7 +59,7 @@ def make_order(request):
         for bk in books:
             bk["qty"] = details[str(bk["book_id"])]
             server_amount+= int(bk["qty"])*math.ceil((bk["price"]-(bk["discount"]*bk["price"])/100))
-            server_weight+=int(bk["qty"])*bk["weight"]
+            server_weight+=int(bk["qty"])*bk["weight"]*bk["delivery_factor"]
         
         server_total_amount = float(server_amount)+float(math.ceil(server_weight/1000)*70)
         totalAmount = float(amount)+float(delivery_charges)
@@ -112,7 +113,7 @@ def track_order(request):
 @api_view(["get"])
 @verify_user
 def get_orders(request):
-    orders = Order.objects.filter(userId=request.user).order_by("-date")
+    orders = Order.objects.filter(Q(userId=request.user),Q(payment=None)|Q(Q(paymentMode='O')&Q(payment__status=PaymentStatus.success.value))).order_by("-date")
     serializer = OrderSerializer(orders,many=True)
     response=[]
     for order in serializer.data:
@@ -132,7 +133,7 @@ def get_all_orders(request):
         return Response({"status":"fail","message":"Invalid request"},status=400)
     start_date = timezone.localize(datetime.datetime.strptime(start_date.split("T")[0],"%Y-%m-%d"))
     end_date = timezone.localize(datetime.datetime.strptime(end_date.split("T")[0],"%Y-%m-%d"))
-    orders = Order.objects.filter(date__gte=start_date,date__lte=end_date).values_list("id","email","mobile","status","paymentMode").order_by("-date")
+    orders = Order.objects.filter(date__gte=start_date,date__lte=end_date).values_list("id","email","mobile","status","paymentMode","weight","amount","delivery_charges","discount").order_by("-date")
     response=[]
     for order in orders:
         response.append({
@@ -140,7 +141,9 @@ def get_all_orders(request):
             "email":order[1],
             "mobile":order[2],
             "status":OrderStatus(order[3]).name,
-            "paymentMethod":"COD" if order[4]=="C" else "Online"
+            "paymentMethod":"COD" if order[4]=="C" else "Online",
+            "weight":order[5],
+            "amount":int(order[6])+int(order[7])-int(order[8])
         })
     
     return Response({"count":len(response),"data":response},status=200)
@@ -149,8 +152,12 @@ def get_all_orders(request):
 @api_view(["post"])
 @verify_manager("orders")
 def updateOrderStatus(request,orderId):
-    try:
+    # try:
         status = request.data.get("status",None)
+        courier_name = request.data.get("courier_name",None)
+        courier_url = request.data.get("courier_url",None)
+        courier_tracking_id = request.data.get("courier_tracking_id",None)
+        message = request.data.get("message",None)
         if status==None:
             return Response({"status":"fail","message":"Invalid request"},status=400)
         order = Order.objects.filter(id=Order.getId(orderId))
@@ -159,15 +166,19 @@ def updateOrderStatus(request,orderId):
         order = order.first()
         if order.payment:
             payment = order.payment.first()
-            if payment.status !=PaymentStatus.success.value and status!=OrderStatus.failed.value:
+            if payment and payment.status !=PaymentStatus.success.value and status!=OrderStatus.failed.value:
                 return Response({"status":"fail","message":"Cannot update status if payment is not done"},status=400)
         order.status=status
-        send_html_mail("Order Update", {"template":"mail/order_status.html","message":{"orderId":order.orderId,"status":OrderStatus(status).name}}, [order.email])
-        
+        order.courier_name = courier_name
+        order.courier_url = courier_url
+        order.courier_tracking_id = courier_tracking_id
+        if message and len(message):
+            send_html_mail("Order Update", {"template":"mail/order_status.html","data":{"orderId":order.orderId,"message":message}}, [order.email])
+            send_sms("Order Update",{"type":"Order Update","params":{"message":message}},[order.mobile])
         order.save()
         return Response({"status":"successfull"},status=200)
-    except Exception as e:
-        return Response({"status":"fail","message":"Internal server error"},status=500)
+    # except Exception as e:
+    #     return Response({"status":"fail","message":"Internal server error"},status=500)
 
 @api_view(["GET"])
 @verify_manager("orders")

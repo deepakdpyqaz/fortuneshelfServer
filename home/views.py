@@ -2,10 +2,21 @@ from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from book.views import getBooksFromDb, books_by_ids
+from home.models import Utilities
+from django.db.models import Q
 # Create your views here.
 @api_view(["GET"])
 def top_selling(request):
-    return Response(getBooksFromDb(1,11,"price"))    
+    return Response(getBooksFromDb(1,11,"-view_count"))    
+
+@api_view(["GET"])
+def all_filters(request):
+    filters = Utilities.objects.filter(Q(key="languages")|Q(key="categories"))
+    response = {}
+    for filter in filters:
+        response.update(filter.value)
+    return Response(response,status=200)
+
 
 def validate_item(item1,item2):
     try:

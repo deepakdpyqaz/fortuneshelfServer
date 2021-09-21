@@ -11,4 +11,5 @@ urlpatterns=[
     path("profile",views.update_user),
     path("reset_password_request",views.resetPasswordRequest),
     path("send_otp",views.send_otp),
+    path("message",views.message)
 ]

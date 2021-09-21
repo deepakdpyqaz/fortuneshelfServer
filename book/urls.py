@@ -8,5 +8,9 @@ urlpatterns=[
     path("search",views.searchBookByKeyWords,name="search_books"),
     path("add",views.create_book),
     path("all",views.allBooks),
-    path("script",views.update_books)
+    path("search_suggestions",views.searchSuggestions),
+    path("get_similar",views.similarBooks),
+    path("script",views.runScript),
+    path("update",views.update_books),
+    path("categories/<str:category>",views.category_books)
 ]

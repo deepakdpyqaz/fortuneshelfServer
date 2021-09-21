@@ -53,6 +53,8 @@ class NimbusCreateOrderThread(threading.Thread):
         r = response.json()
         if r["status"]:
             self.order.trackingId=r["data"]
+            self.order.weight = weight
+            self.order.dimension = f"{length} X {breadth} X {height}"
             self.order.save()
         else:
             print("Error in code")

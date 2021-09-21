@@ -33,9 +33,14 @@ class Order(models.Model):
     delivery_charges = models.FloatField()
     details = models.JSONField()
     trackingId = models.CharField(max_length=30,null=True)
+    courier_url = models.CharField(max_length=100,null=True,blank=True,default=None)
+    courier_tracking_id = models.CharField(max_length=50,null=True,blank=True,default=None)
+    courier_name=models.CharField(max_length=100,null=True,blank=True,default=None)
     discount = models.FloatField(default=0,blank=True,null=True)
     status = models.IntegerField(default=OrderStatus.pending.value)
     date = models.DateTimeField(auto_now_add=True, blank=True)
+    weight = models.FloatField(default=0,null=True,blank=True)
+    dimension = models.CharField(default="",null=True,blank=True,max_length=15)
     PAYMENTMODE = (
         ("C","COD"),
         ("O","ONLINE")

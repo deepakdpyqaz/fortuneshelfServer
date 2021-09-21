@@ -38,7 +38,6 @@ class SmsThread(threading.Thread):
             Message = self.message,
             Subject = self.subject
         )
-
 def send_html_mail(subject, message, recipient_list):
     html_message = render_to_string(message["template"],message["data"])
     plain_message = strip_tags(html_message)
@@ -50,7 +49,8 @@ def message_generator(key,params):
         "Verification":"Use OTP {} to verify your account".format(params.get("otp",None)),
         "Reset Password":"We have recieved the request to reset your password. Use OTP {} to reset your password. If you have not made this request then contact enquiry@fortuneshelf.com".format(params.get("otp",None)),
         "Order":"Hi, {} your order with order id {} for Rs. {} is placed successfully, you can track your order using the link {} thank you.".format(params.get("name",None),params.get("orderId",None),params.get("amount",None),params.get("url",None)),
-        "Invitation":"Welcome to FortuneShelf. Use your email or phone as username and password: {} to login to your account".format(params.get("password"))
+        "Invitation":"Welcome to FortuneShelf. Use your email or phone as username and password: {} to login to your account".format(params.get("password",None)),
+        "Order Update":"{}".format(params.get("message",None))
     }
     return messages.get(key,"")
 

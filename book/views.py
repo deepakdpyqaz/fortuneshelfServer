@@ -12,7 +12,8 @@ import threading
 from threading import Thread
 from django.contrib.postgres.search import  SearchQuery, SearchRank, SearchVector
 from manager.views import verify_manager
-
+from django.conf import settings
+from django.db.models import Subquery
 
 class updateBookView(threading.Thread):
     def __init__(self,booklst):
@@ -39,16 +40,18 @@ def getBooks(request):
         low_price = int(request.query_params.get("low_price",0))
         high_price = int(request.query_params.get("high_price",0))
         language = request.query_params.get("language",None)
+        category = request.query_params.get("category",None)
+        delivery_free = request.query_params.get("delivery_free",False)
     except Exception as e:
         return Response({"status":"fail","Message":str(e)},status=400)
     try:
-        return Response(getBooksFromDb(page_number,per_page,order_by,isDescending,low_price,high_price,language))
+        return Response(getBooksFromDb(page_number,per_page,order_by,isDescending,low_price,high_price,language,category,delivery_free))
     except Exception as e:
         return Response({"status":"fail","message":"Internal Server Error"},status=500)
 
-def getBooksFromDb(page_number,per_page,order_by,desc=False,low_price=None,high_price=None,language=None):
+def getBooksFromDb(page_number,per_page,order_by,desc=False,low_price=None,high_price=None,language=None,category=None,delivery_free=False):
     if not order_by:
-        order_by="view_count"
+        order_by="-view_count"
     if desc:
         order_by="-"+order_by
     filters={}
@@ -56,10 +59,14 @@ def getBooksFromDb(page_number,per_page,order_by,desc=False,low_price=None,high_
         filters["language"]=language
     if low_price:
         filters["price__gte"]=low_price
+    if delivery_free and delivery_free=="true":
+        filters["delivery_factor"]=0
     if high_price:
         filters["price__lte"] = high_price
-
-    books = Book.objects.filter(**filters).order_by(order_by)[(page_number-1)*per_page:page_number*per_page-1:]
+    if category:
+        filters["category"] = category.lower()
+    print(filters)
+    books = Book.objects.filter(**filters).order_by(order_by)[(page_number-1)*per_page:page_number*per_page:]
     serializer = BookSerializer(books,many=True)
     return serializer.data
 
@@ -70,7 +77,7 @@ def searchBookByKeyWords(request):
     queryString = request.query_params.get("query",None)
     if not queryString:
         return Response([],status=200)
-    vector = SearchVector("title",weight='A')+SearchVector("description",weight='B') + SearchVector("language",weight='C')
+    vector = SearchVector("title",weight='A')+SearchVector("language",weight='B') + SearchVector("description",weight='C')
     query = SearchQuery(queryString)
     booklist = Book.objects.annotate(rank=SearchRank(vector, query)).filter(rank__gte=0.3).order_by('-rank')
     serializer = BookSerializer(booklist,many=True)
@@ -135,7 +142,7 @@ def create_book(request):
         if not (title and price  and language and length and breadth and height and weight and description and picture and stock):
             return Response({"status":"fail","message":"Invalid request"},status=400)
         
-        book = Book(title=title,price=price,language=language.lower(),discount=discount,length=length,breadth=breadth,height=height,weight=weight,description=description,picture=picture,delivery_factor=delivery_factor,max_stock=stock,category=category)
+        book = Book(title=title,price=price,language=language.lower(),discount=discount,length=length,breadth=breadth,height=height,weight=weight,description=description,picture=picture,delivery_factor=delivery_factor,max_stock=stock,category=category.lower())
         book.save()
         return Response({"status":"success","bookId":book.bookId},status=201)
     except Exception as e:
@@ -207,7 +214,105 @@ def allBooks(request):
 
 @api_view(["GET"])
 def runScript(request):
-    return 
+    # os.chdir("media/images")
+    # images = os.listdir()
+    # success=0
+    # fail=0
+    # data=[]
+    # try:
+    #     for img in images:
+    #         imgorg=img
+    #         img = ".".join(img.split(".")[:-1])
+    #         bk = Book.objects.filter(title=img)
+    #         if not bk:
+    #             split = img.split("(")
+    #             if len(split)>=2:
+    #                 img,lang="".join(split[:-1]),split[-1]
+    #                 img = img.strip(" ")
+    #                 lang = lang.strip(" ")
+    #                 lang = lang.strip(")")
+    #                 bk = Book.objects.filter(title=img,language__icontains=lang)
+    #                 if not bk:
+    #                     fail+=1
+    #                     data.append(imgorg)
+    #                 else:
+    #                     bk=bk.first()
+    #                     bk.picture = f"books/{imgorg}"
+    #                     success+=1
+    #                     bk.save()
+    #             else:
+    #                 fail+=1
+    #                 data.append(imgorg)
+    #         else:
+    #             bk=bk.first()
+    #             bk.picture = f"books/{imgorg}"
+    #             success+=1
+    #             bk.save()
+    #     return Response({"status":"success","success":success,"fail":fail,"data":data})
+    # except Exception as e:
+    #     return Response({'status':"fail","error":str(e)})
+    with open("data-new.csv",encoding="utf-8",newline="\n") as f:
+        reader = csv.reader(f,delimiter=",")
+        success=0
+        fail = 0
+        failList={}
+        escape=True
+        added=0
+        i=0
+        for row in reader:
+            i+=1
+            if escape:
+                escape=False
+                continue
+            try:
+                id = (row[0])
+                title = row[1]
+                language = row[2].lower()
+                if not id and not title and not language:
+                    continue
+                weight = int(row[3])
+                price = int(row[4])
+                discount = int(row[5])
+                delivery_factor = int(row[6])
+                max_stock = int(row[7])
+                category = row[8]
+                if not category:
+                    category=None
+                if not id:
+                    bk = Book(title=title,language=language.lower(),weight=int(weight),price=int(price),discount=int(discount),delivery_factor=int(delivery_factor),category=category,max_stock=int(max_stock),length=30,breadth=30,height=30,picture=title+".jpg",description=title)
+                    added+=1
+                else:
+                    bk = Book.objects.filter(id=id)
+                    bk = bk.first()
+                if not bk:
+                    fail+=1
+                    failList[id]=title, "bk not found"
+                    continue
+                bk.title = title
+                bk.language=language
+                bk.weight=weight
+                bk.price=price
+                bk.discount=discount
+                bk.delivery_factor = delivery_factor
+                bk.max_stock = max_stock
+                if category:
+                    bk.category=category
+                else:
+                    bk.category=None
+                bk.save()
+                success+=1
+            except Exception as e:
+                fail+=1
+                failList["error"+str(i)]=str(e)
+        return Response({"success":success,"fail":fail,"data":failList,"added":added},status=200)
+        if(counter%3==0):
+            bk.category="gita"
+        elif(counter%3==1):
+            bk.category="set"
+        else:
+            bk.category="bhagavatam"
+        bk.save()
+    return Response({"status":"Done"})
     books = Book.objects.all()
     for book in books:
         book.dimension = book.dimension.replace(chr(215),"x")
@@ -226,6 +331,40 @@ def runScript(request):
 def update_books(request):
     books = Book.objects.all()
     for book in books:
-        book.language = book.language.lower()
-        book.save()
-    return Response({"status":"fail"},status=200)
+        if book.category:
+            book.category = book.category.lower()
+            book.save()
+    return Response({"status":"success"},status=200)
+
+
+@api_view(["get"])
+def searchSuggestions(request):
+    query = request.query_params.get("query")
+    books = Book.objects.values_list("title","picture").filter(title__icontains=query).order_by("-view_count")[:5]
+    response = []
+    for counter,bk in enumerate(books):
+        response.append({"title":bk[0],"picture":settings.MEDIA_URL+bk[1],"index":counter});
+    return Response(response,status=200)
+
+
+@api_view(["get"])
+def similarBooks(request):
+    id = request.query_params.get("id",None)
+    if not id:
+        return Response({'status':"fail","message":"Invalid request"},status=400)
+    book = Book.objects.filter(id=Book.getId(id)).first()
+    books = Book.objects.filter(language=book.language,category=book.category)[:10]
+    serializer = BookSerializer(books,many=True)
+    return Response(serializer.data,status=200)
+
+@api_view(["GET"])
+def category_books(request,category):
+    try:
+        books = Book.objects.filter(category=category).order_by("-view_count")[:10]
+        if len(books)<5:
+            return Response({"books":[]},status=200)
+        else:
+            serializer = BookSerializer(books,many=True)
+            return Response({"books":serializer.data},status=200)
+    except Exception as e:
+        return Response({"status":"fail","message":"Internal Server Error"},status=500)

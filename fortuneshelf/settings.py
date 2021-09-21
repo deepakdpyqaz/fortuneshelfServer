@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import logging
 
 load_dotenv() 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -41,6 +42,7 @@ INSTALLED_APPS = [
     'order.apps.OrderConfig',
     'book.apps.BookConfig',
     'user.apps.UserConfig',
+    'home.apps.HomeConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -50,6 +52,7 @@ INSTALLED_APPS = [
     'django.contrib.postgres',
     'rest_framework',
      'corsheaders',
+     'schedular.apps.SchedularConfig'
 ]
 
 MIDDLEWARE = [
@@ -134,12 +137,12 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
-USE_S3 = True   
+USE_S3 = not DEBUG  or True
 # AWS
 AWS_ACCESS_KEY_ID = os.getenv("AWSAccessKeyId")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWSSecretKey")
+REGION_NAME = os.getenv("region_name")
 if USE_S3:
-    REGION_NAME = os.getenv("region_name")
     AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
     AWS_DEFAULT_ACL = 'public-read'
     AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
@@ -160,7 +163,7 @@ else:
         os.path.join(BASE_DIR,"static")
     ]
     MEDIA_ROOT=os.path.join(BASE_DIR,"media")
-    MEDIA_URL="/media/"
+    MEDIA_URL="http://localhost:8000/media/"
 
 
 # Default primary key field type
@@ -210,9 +213,23 @@ NP_API_KEY = os.getenv("NP_API_KEY")
 # PAYU
 MERCHANT_KEY=os.getenv("MERCHANT_KEY")
 MERCHANT_SALT = os.getenv("MERCHANT_SALT")
-# MERCHANT_KEY="vUWFZt"
-# MERCHANT_SALT=""
 SURL = os.getenv("SURL")
 FURL = os.getenv("FURL")
 CURL = os.getenv("CURL")
 RURL = os.getenv("RURL")
+
+
+# Schedular
+SCHEDULAR = bool(os.getenv("SCHEDULAR"))
+
+LOGGER=True
+
+if DEBUG:
+    level = logging.DEBUG
+else:
+    level = logging.ERROR
+# LOGGER
+if LOGGER:
+    logging.basicConfig(filename='fortuneshelf.log', level=level,format='%(levelname)s:%(asctime)s %(message)s')
+
+SUPPORT_MAIL = os.getenv("SUPPORT_MAIL")

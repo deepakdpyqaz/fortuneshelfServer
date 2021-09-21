@@ -5,6 +5,7 @@ from user.serializers import UserSerializer, BillingProfileSerializer
 from rest_framework.response import Response
 from rest_framework.request import Request
 from mailService import send_html_mail, send_sms
+from django.conf import settings
 import random
 from django.db.models import Q
 from rest_framework.views import APIView
@@ -12,7 +13,6 @@ import bcrypt
 import uuid
 import datetime
 import time
-
 # Create your views here.
 @api_view(["POST"])
 def login(request):
@@ -243,6 +243,9 @@ class ProfileBilling(APIView):
             title = request.data.get("title",None)
             if not (address and pincode and district and city and state and title):
                 return Response({"status":"fail","message":"Invalid Request"},status=400)
+            existingProfiles = BillingProfile(userId=request.userId,title=title)
+            if existingProfiles:
+                return Response({"status":'fail',"message":"Profile with same title already exists"},status=400)
             billingProfile = BillingProfile(title=title,userId=request.user,address=address,pincode=pincode,district=district,city=city,state=state)
             billingProfile.save()
             return Response({"status":"success","profile_id":billingProfile.id  },status=201)
@@ -422,3 +425,19 @@ def send_otp(request):
         return Response({"status":"fail","message":"Could not send otp"},status=500)
 
 
+@api_view(["post"])
+def message(request):
+    first_name = request.data.get("first_name",None)
+    last_name = request.data.get("last_name",None)
+    phone = request.data.get("phone",None)  
+    email = request.data.get("email",None)
+    message = request.data.get("message",None)
+    if not first_name or not last_name or not phone or not email or not message:
+        return Response({"status":"fail","message":"Invalid request"},status=400)
+    send_html_mail("Message", {"template":"mail/message.html","data":{
+        "name":f"{first_name} {last_name}",
+        "phone":phone,
+        "email":email,
+        "message":message
+    }}, [settings.SUPPORT_MAIL])
+    return Response({"status":"success"},status=200)
