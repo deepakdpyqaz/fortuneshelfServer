@@ -8,3 +8,4 @@ payment/config.json
 *.csv
 assets/
 *.xlsx
+*.log

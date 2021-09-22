@@ -31,7 +31,7 @@ if os.getenv("environment")=="dev":
     DEBUG = True
 else:
     DEBUG = False
-ALLOWED_HOSTS = ["app.fortuneshelf.com","fortuneshelf-load-balancer-1472405162.us-east-1.elb.amazonaws.com","localhost","127.0.0.1","192.168.43.190"]
+ALLOWED_HOSTS = ["app.fortuneshelf.com","fortuneshelf-load-balancer-1472405162.us-east-1.elb.amazonaws.com","localhost","127.0.0.1","192.168.43.190","192.168.3.242"]
 
 
 # Application definition
@@ -181,6 +181,7 @@ CORS_ORIGIN_WHITELIST = (
   'http://localhost:3000',
   'http://localhost:5000',
   'http://192.168.43.190:3000',
+  'http://192.168.3.242:3000',
   "https://www.fortuneshelf.com",
   "http://www.fortuneshelf.com",
   "https://fortuneshelf.com",

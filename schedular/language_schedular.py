@@ -8,6 +8,7 @@ def languageSchedular():
         languageKey = Utilities.objects.get(key="languages")
         languageKey.value={"languages":[item for item, in languages.all() ]}
         languageKey.save()
+        print("Done language")
     except Exception as e:
         logging.error(str(e))
     

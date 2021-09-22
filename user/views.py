@@ -136,6 +136,8 @@ def resetPassword(request):
         user = user.first()
         if user.generated_on - datetime.datetime.now(datetime.timezone.utc)>datetime.timedelta(minutes=20):
             return Response({"status":"fail","message":"OTP expired"},status=400)
+        if(user.verify_password(password)):
+            return Response({"status":"fail","message":"New and old password cannot be same"},status=400)
         user.password = password
         user.save()
         try:
@@ -243,13 +245,14 @@ class ProfileBilling(APIView):
             title = request.data.get("title",None)
             if not (address and pincode and district and city and state and title):
                 return Response({"status":"fail","message":"Invalid Request"},status=400)
-            existingProfiles = BillingProfile(userId=request.userId,title=title)
+            existingProfiles = BillingProfile(userId=request.user,title=title)
             if existingProfiles:
                 return Response({"status":'fail',"message":"Profile with same title already exists"},status=400)
             billingProfile = BillingProfile(title=title,userId=request.user,address=address,pincode=pincode,district=district,city=city,state=state)
             billingProfile.save()
             return Response({"status":"success","profile_id":billingProfile.id  },status=201)
         except Exception as e:
+            print(e)
             return Response({"status":'fail',"message":"Internal Server Error"},status=500)
 
 
@@ -279,6 +282,7 @@ class ProfileBillingDetails(APIView):
             billingProfile = BillingProfile.objects.filter(id=id,userId=request.user)
             if not billingProfile:
                 return Response({'status':"fail","message":"Billing Profile not found"},status=404)
+            billingProfile=billingProfile.first()
             billingProfile.address = address
             billingProfile.pincode = pincode
             billingProfile.district = district
@@ -288,6 +292,7 @@ class ProfileBillingDetails(APIView):
             billingProfile.save()
             return Response({"status":"success"},status=200)
         except Exception as e:
+            print(e)
             return Response({"status":'fail',"message":"Internal Server Error"},status=500)
 
 @api_view(["get"])

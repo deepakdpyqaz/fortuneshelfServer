@@ -14,7 +14,7 @@ from django.contrib.postgres.search import  SearchQuery, SearchRank, SearchVecto
 from manager.views import verify_manager
 from django.conf import settings
 from django.db.models import Subquery
-
+import logging
 class updateBookView(threading.Thread):
     def __init__(self,booklst):
         self.booklst=booklst
@@ -47,6 +47,7 @@ def getBooks(request):
     try:
         return Response(getBooksFromDb(page_number,per_page,order_by,isDescending,low_price,high_price,language,category,delivery_free))
     except Exception as e:
+        logging.error(str(e))
         return Response({"status":"fail","message":"Internal Server Error"},status=500)
 
 def getBooksFromDb(page_number,per_page,order_by,desc=False,low_price=None,high_price=None,language=None,category=None,delivery_free=False):
@@ -65,7 +66,6 @@ def getBooksFromDb(page_number,per_page,order_by,desc=False,low_price=None,high_
         filters["price__lte"] = high_price
     if category:
         filters["category"] = category.lower()
-    print(filters)
     books = Book.objects.filter(**filters).order_by(order_by)[(page_number-1)*per_page:page_number*per_page:]
     serializer = BookSerializer(books,many=True)
     return serializer.data
@@ -74,15 +74,19 @@ def getBooksFromDb(page_number,per_page,order_by,desc=False,low_price=None,high_
 
 @api_view(["GET"])
 def searchBookByKeyWords(request):
-    queryString = request.query_params.get("query",None)
-    if not queryString:
-        return Response([],status=200)
-    vector = SearchVector("title",weight='A')+SearchVector("language",weight='B') + SearchVector("description",weight='C')
-    query = SearchQuery(queryString)
-    booklist = Book.objects.annotate(rank=SearchRank(vector, query)).filter(rank__gte=0.3).order_by('-rank')
-    serializer = BookSerializer(booklist,many=True)
+    try:
+        queryString = request.query_params.get("query",None)
+        if not queryString:
+            return Response([],status=200)
+        vector = SearchVector("title",weight='A')+SearchVector("language",weight='B') + SearchVector("description",weight='C')
+        query = SearchQuery(queryString)
+        booklist = Book.objects.annotate(rank=SearchRank(vector, query)).filter(rank__gte=0.3).order_by('-rank')
+        serializer = BookSerializer(booklist,many=True)
 
-    return Response(serializer.data,status=200)
+        return Response(serializer.data,status=200)
+    except Exception as e:
+        logging.error(str(e))
+        return Response({"status":"fail","message":"Internal Server Error"},status=500)
 
 @api_view(["GET"])
 def book_by_id(request,bookid):
@@ -93,6 +97,7 @@ def book_by_id(request,bookid):
         serializer = FullBookSerializer(book[0])
         return Response(serializer.data,status=200)
     else:
+        logging.error(str(e))
         return Response({"status":"fail","message":"Book not found"},404)
 
 def books_by_ids(bookids,obj=False,record=True):
@@ -146,6 +151,7 @@ def create_book(request):
         book.save()
         return Response({"status":"success","bookId":book.bookId},status=201)
     except Exception as e:
+        logging.error(str(e))
         return Response({"status":"fail","message":"Internal server error"},status=500)
 
 class BookDetails(APIView):
@@ -191,6 +197,7 @@ class BookDetails(APIView):
             book.save()
             return Response({"status":"success"},status=200)
         except Exception as e:
+            logging.error(str(e))
             return Response({"status":"fail","message":"Internal Server Error"},status=500)
 
     @verify_manager("books")
@@ -202,6 +209,7 @@ class BookDetails(APIView):
             book.delete()
             return Response({"status":"success"},status=200)
         except Exception as e:
+            logging.error(str(e))
             return Response({"status":"fail","message":"Internal Server Error"},status=500)
 
 
@@ -210,10 +218,13 @@ class BookDetails(APIView):
 def allBooks(request):
     books = Book.objects.values_list("id","title").order_by("-id")
     response = [{"bookId":book[0]+Book.START,"title":book[1]} for book in books]
+    logging.error(str(e))
     return Response({"status":"success","data":response},status=200)
 
 @api_view(["GET"])
 def runScript(request):
+    if not settings.DEBUG:
+        return
     # os.chdir("media/images")
     # images = os.listdir()
     # success=0
@@ -329,6 +340,8 @@ def runScript(request):
 
 @api_view(["GET"])
 def update_books(request):
+    if not settings.DEBUG:
+        return
     books = Book.objects.all()
     for book in books:
         if book.category:
@@ -339,23 +352,31 @@ def update_books(request):
 
 @api_view(["get"])
 def searchSuggestions(request):
-    query = request.query_params.get("query")
-    books = Book.objects.values_list("title","picture").filter(title__icontains=query).order_by("-view_count")[:5]
-    response = []
-    for counter,bk in enumerate(books):
-        response.append({"title":bk[0],"picture":settings.MEDIA_URL+bk[1],"index":counter});
-    return Response(response,status=200)
+    try:
+        query = request.query_params.get("query")
+        books = Book.objects.values_list("title","picture").filter(title__icontains=query).order_by("-view_count")[:5]
+        response = []
+        for counter,bk in enumerate(books):
+            response.append({"title":bk[0],"picture":settings.MEDIA_URL+bk[1],"index":counter});
+        return Response(response,status=200)
+    except Exception as e:
+        logging.error(e)
+        return Response({"status":"fail","message":"Internal Server Error"},status=500)
 
 
 @api_view(["get"])
 def similarBooks(request):
-    id = request.query_params.get("id",None)
-    if not id:
-        return Response({'status':"fail","message":"Invalid request"},status=400)
-    book = Book.objects.filter(id=Book.getId(id)).first()
-    books = Book.objects.filter(language=book.language,category=book.category)[:10]
-    serializer = BookSerializer(books,many=True)
-    return Response(serializer.data,status=200)
+    try:
+        id = request.query_params.get("id",None)
+        if not id:
+            return Response({'status':"fail","message":"Invalid request"},status=400)
+        book = Book.objects.filter(id=Book.getId(id)).first()
+        books = Book.objects.filter(language=book.language,category=book.category)[:10]
+        serializer = BookSerializer(books,many=True)
+        return Response(serializer.data,status=200)
+    except Exception as e:
+        logging.error(str(e))
+        return Response({"status":"fail","message":"Internal Server Error"},status=500)
 
 @api_view(["GET"])
 def category_books(request,category):
@@ -367,4 +388,5 @@ def category_books(request,category):
             serializer = BookSerializer(books,many=True)
             return Response({"books":serializer.data},status=200)
     except Exception as e:
+        logging.error(e)
         return Response({"status":"fail","message":"Internal Server Error"},status=500)

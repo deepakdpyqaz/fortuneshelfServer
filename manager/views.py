@@ -185,6 +185,8 @@ def resetPassword(request):
         manager = manager.first()
         if manager.generated_on - datetime.datetime.now(datetime.timezone.utc)>datetime.timedelta(minutes=20):
             return Response({"status":"fail","message":"OTP expired"},status=400)
+        if manager.verify_password(password):
+            return Response({"status":"fail","message":"New and old password cannot be same"},status=400)
         manager.password=password
         manager.save()
         return Response({"status":"success"},status=200)

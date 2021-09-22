@@ -7,7 +7,6 @@ def categorySchedular():
         categoryKey = Utilities.objects.get(key="categories")
         categoryKey.value={"categories":[item for item, in categories.all() ]}
         categoryKey.save()
-        logging.debug("Success")
+        print("Done category")
     except Exception as e:
         logging.error("Error "+str(e))
-    
