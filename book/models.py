@@ -18,6 +18,7 @@ class Book(models.Model):
     length = models.IntegerField(default=0,null=True,blank=True)
     breadth = models.IntegerField(default=0,null=True,blank=True)
     height = models.IntegerField(default=0,null=True,blank=True)
+    outdated = models.BooleanField(default=False,blank=True,null=True)
     def __str__(self):
         return self.title
     

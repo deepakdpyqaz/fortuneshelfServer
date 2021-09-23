@@ -179,7 +179,7 @@ def get_all_payments(request):
     if not start_date or not end_date:
         return Response({"status":"fail","message":"Invalid request"},status=400)
     start_date = timezone.localize(datetime.datetime.strptime(start_date.split("T")[0],"%Y-%m-%d"))
-    end_date = timezone.localize(datetime.datetime.strptime(end_date.split("T")[0],"%Y-%m-%d"))
+    end_date = timezone.localize(datetime.datetime.strptime(end_date.split("T")[0],"%Y-%m-%d")+datetime.timedelta(days=1))
     payments = Payment.objects.filter(date__gte=start_date,date__lte=end_date).order_by("-date")
     response=[]
     for payment in payments:    

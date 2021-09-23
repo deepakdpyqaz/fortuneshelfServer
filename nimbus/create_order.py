@@ -4,6 +4,7 @@ from django.conf import settings
 from book.views import books_by_ids
 import threading
 from threading import Thread
+import logging
 
 url = "https://ship.nimbuspost.com/api/orders/create"
 
@@ -57,7 +58,7 @@ class NimbusCreateOrderThread(threading.Thread):
             self.order.dimension = f"{length} X {breadth} X {height}"
             self.order.save()
         else:
-            print("Error in code")
+            loggging.error(r.get("message","Error in nimbuspost"))
 
 
 def create_order(order,books):

@@ -234,3 +234,4 @@ if LOGGER:
     logging.basicConfig(filename='fortuneshelf.log', level=level,format='%(levelname)s:%(asctime)s %(message)s')
 
 SUPPORT_MAIL = os.getenv("SUPPORT_MAIL")
+DEVELOPER_EMAIL = os.getenv("DEVELOPER_EMAIL")

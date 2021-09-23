@@ -16,6 +16,7 @@ from payment.models import Payment,PaymentStatus
 from user.serializers import UserSerializer
 from django.db.models import Q
 import math
+from home.views import getDeliveryChargeFromDb
 # Create your views here.
 timezone = pytz.timezone("Asia/Kolkata")
 @api_view(["PUT"])
@@ -61,7 +62,7 @@ def make_order(request):
             server_amount+= int(bk["qty"])*math.ceil((bk["price"]-(bk["discount"]*bk["price"])/100))
             server_weight+=int(bk["qty"])*bk["weight"]*bk["delivery_factor"]
         
-        server_total_amount = float(server_amount)+float(math.ceil(server_weight/1000)*70)
+        server_total_amount = float(server_amount)+float(math.ceil(server_weight/1000)*getDeliveryChargeFromDb())
         totalAmount = float(amount)+float(delivery_charges)
         if abs(totalAmount-server_total_amount)>0.001:
             return Response({"status":"fail","message":"Cart not updated"},status=409)
@@ -132,18 +133,24 @@ def get_all_orders(request):
     if not start_date or not end_date:
         return Response({"status":"fail","message":"Invalid request"},status=400)
     start_date = timezone.localize(datetime.datetime.strptime(start_date.split("T")[0],"%Y-%m-%d"))
-    end_date = timezone.localize(datetime.datetime.strptime(end_date.split("T")[0],"%Y-%m-%d"))
-    orders = Order.objects.filter(date__gte=start_date,date__lte=end_date).values_list("id","email","mobile","status","paymentMode","weight","amount","delivery_charges","discount").order_by("-date")
+    end_date = timezone.localize(datetime.datetime.strptime(end_date.split("T")[0],"%Y-%m-%d"))+datetime.timedelta(days=1)
+    orders = Order.objects.filter(date__gte=start_date,date__lte=end_date).order_by("-date")
     response=[]
     for order in orders:
+        paymentStatus="NA"
+        if order.payment:
+            if order.payment.first():
+                paymentStatus=PaymentStatus(order.payment.first().status).name
         response.append({
-            "orderId":Order.START+int(order[0]),
-            "email":order[1],
-            "mobile":order[2],
-            "status":OrderStatus(order[3]).name,
-            "paymentMethod":"COD" if order[4]=="C" else "Online",
-            "weight":order[5],
-            "amount":int(order[6])+int(order[7])-int(order[8])
+            "orderId":order.orderId,
+            "email":order.email,
+            "mobile":order.mobile,
+            "status":OrderStatus(order.status).name,
+            "paymentMethod":"COD" if order.paymentMode=="C" else "Online",
+            "weight":order.weight,
+            "amount":order.amount+order.delivery_charges-order.discount,
+            "paymentStatus":paymentStatus,
+            "address":order.address
         })
     
     return Response({"count":len(response),"data":response},status=200)
@@ -152,7 +159,7 @@ def get_all_orders(request):
 @api_view(["post"])
 @verify_manager("orders")
 def updateOrderStatus(request,orderId):
-    # try:
+    try:
         status = request.data.get("status",None)
         courier_name = request.data.get("courier_name",None)
         courier_url = request.data.get("courier_url",None)
@@ -177,8 +184,8 @@ def updateOrderStatus(request,orderId):
             send_sms("Order Update",{"type":"Order Update","params":{"message":message}},[order.mobile])
         order.save()
         return Response({"status":"successfull"},status=200)
-    # except Exception as e:
-    #     return Response({"status":"fail","message":"Internal server error"},status=500)
+    except Exception as e:
+        return Response({"status":"fail","message":"Internal server error"},status=500)
 
 @api_view(["GET"])
 @verify_manager("orders")

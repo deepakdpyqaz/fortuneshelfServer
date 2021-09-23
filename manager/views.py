@@ -14,6 +14,15 @@ from mailService import send_html_mail, send_sms
 import random
 # Create your views here.
 
+def get_manager(token):
+    if not token:
+        return False, None
+    token = AdminToken.objects.filter(token=token)
+    if not token:
+        return False, None
+    else:
+        return True, token.first().manager
+
 def verify_manager(permission):
     def verify_manager_wrapper(func):
         def inner(*args, **kwargs):

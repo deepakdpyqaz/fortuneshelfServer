@@ -15,6 +15,7 @@ from manager.views import verify_manager
 from django.conf import settings
 from django.db.models import Subquery
 import logging
+from manager.views import get_manager
 class updateBookView(threading.Thread):
     def __init__(self,booklst):
         self.booklst=booklst
@@ -66,7 +67,7 @@ def getBooksFromDb(page_number,per_page,order_by,desc=False,low_price=None,high_
         filters["price__lte"] = high_price
     if category:
         filters["category"] = category.lower()
-    books = Book.objects.filter(**filters).order_by(order_by)[(page_number-1)*per_page:page_number*per_page:]
+    books = Book.objects.filter(outdated=False,**filters).order_by(order_by)[(page_number-1)*per_page:page_number*per_page:]
     serializer = BookSerializer(books,many=True)
     return serializer.data
 
@@ -80,7 +81,7 @@ def searchBookByKeyWords(request):
             return Response([],status=200)
         vector = SearchVector("title",weight='A')+SearchVector("language",weight='B') + SearchVector("description",weight='C')
         query = SearchQuery(queryString)
-        booklist = Book.objects.annotate(rank=SearchRank(vector, query)).filter(rank__gte=0.3).order_by('-rank')
+        booklist = Book.objects.annotate(rank=SearchRank(vector, query)).filter(outdated=False,rank__gte=0.3).order_by('-rank')
         serializer = BookSerializer(booklist,many=True)
 
         return Response(serializer.data,status=200)
@@ -90,15 +91,27 @@ def searchBookByKeyWords(request):
 
 @api_view(["GET"])
 def book_by_id(request,bookid):
-    START = 1000000
-    book = Book.objects.filter(id=bookid-START)
-    if book:
-        updateBookViewRecord(book)
-        serializer = FullBookSerializer(book[0])
-        return Response(serializer.data,status=200)
-    else:
+    try:
+        START = 1000000
+        outdatedAccess=False
+        print(request.headers)
+        if "authorization" in request.headers:
+            op_status,manager = get_manager(request.headers.get("authorization",""))
+            if op_status and manager.books:
+                outdatedAccess=True
+        if outdatedAccess:
+            book = Book.objects.filter(id=bookid-START)
+        else:
+            book = Book.objects.filter(id=bookid-START,outdated=False)
+        if book:
+            updateBookViewRecord(book)
+            serializer = FullBookSerializer(book[0])
+            return Response(serializer.data,status=200)
+        else:
+            return Response({"status":"fail","message":"Book not found"},404)
+    except Exception as e:
         logging.error(str(e))
-        return Response({"status":"fail","message":"Book not found"},404)
+        return Response({"status":"fail","message":"Internal Server Error"},status=500)
 
 def books_by_ids(bookids,obj=False,record=True):
     START = 1000000
@@ -179,23 +192,34 @@ class BookDetails(APIView):
             if not book:
                 return Response({"status":"fail","message":"Book not found"},status=404)
             book = book.first()
-            book.title = title
-            book.price = price
-            book.author = author
-            book.language = language
-            book.discount = discount
-            book.length = length
-            book.breadth = breadth
-            book.height = height
-            book.weight = weight
-            book.description = description
-            if picture:
-                book.picture = picture
-            book.delivery_factor = delivery_factor
-            book.max_stock = stock
-            book.category = category
-            book.save()
-            return Response({"status":"success"},status=200)
+            if (book.price == float(price)) and (book.discount==float(discount)) and (book.delivery_factor==float(delivery_factor)) and (book.weight==float(weight)):
+                book.title = title
+                book.price = price
+                book.author = author
+                book.language = language
+                book.discount = discount
+                book.length = length
+                book.breadth = breadth
+                book.height = height
+                book.weight = weight
+                book.description = description
+                if picture:
+                    book.picture = picture
+                book.delivery_factor = delivery_factor
+                book.max_stock = stock
+                book.category = category
+                book.save()
+                return Response({"status":"success","created":False},status=200)
+            else:
+                book.outdated=True
+                book.save()
+                newBook = Book(title=title,price=price,language=language,discount=discount,length=length,breadth=breadth,height=height,weight=weight,description=description,delivery_factor=delivery_factor,max_stock=stock,category=category)
+                if picture:
+                    newBook.picture = picture
+                else:
+                    newBook.picture=book.picture
+                newBook.save()
+                return Response({"status":"success","bookId":newBook.bookId,"created":True},status=200)
         except Exception as e:
             logging.error(str(e))
             return Response({"status":"fail","message":"Internal Server Error"},status=500)
@@ -206,7 +230,9 @@ class BookDetails(APIView):
             book = Book.objects.filter(id=Book.getId(bookId))
             if not book:
                 return Response({"status":"fail","message":"Book not found"},status=404)
-            book.delete()
+            book = book.first()
+            book.outdated=True
+            book.save()
             return Response({"status":"success"},status=200)
         except Exception as e:
             logging.error(str(e))
@@ -216,15 +242,19 @@ class BookDetails(APIView):
 @api_view(["GET"])
 @verify_manager("books")
 def allBooks(request):
-    books = Book.objects.values_list("id","title").order_by("-id")
-    response = [{"bookId":book[0]+Book.START,"title":book[1]} for book in books]
-    logging.error(str(e))
-    return Response({"status":"success","data":response},status=200)
+    try:
+        books = Book.objects.values_list("id","title").filter(outdated=False).order_by("-id")
+        response = [{"bookId":book[0]+Book.START,"title":book[1]} for book in books]
+        return Response({"status":"success","data":response},status=200)
+    except Exception as e:
+        logging.error(str(e))
+        return Response({"status":"fail","message":"Internal Server Error"},status=500)
 
 @api_view(["GET"])
 def runScript(request):
     if not settings.DEBUG:
-        return
+        return Response({},status=404)
+        
     # os.chdir("media/images")
     # images = os.listdir()
     # success=0
@@ -341,7 +371,7 @@ def runScript(request):
 @api_view(["GET"])
 def update_books(request):
     if not settings.DEBUG:
-        return
+        return Response({},status=404)
     books = Book.objects.all()
     for book in books:
         if book.category:
@@ -371,7 +401,7 @@ def similarBooks(request):
         if not id:
             return Response({'status':"fail","message":"Invalid request"},status=400)
         book = Book.objects.filter(id=Book.getId(id)).first()
-        books = Book.objects.filter(language=book.language,category=book.category)[:10]
+        books = Book.objects.filter(language=book.language,category=book.category,outdated=False)[:10]
         serializer = BookSerializer(books,many=True)
         return Response(serializer.data,status=200)
     except Exception as e:
@@ -381,7 +411,7 @@ def similarBooks(request):
 @api_view(["GET"])
 def category_books(request,category):
     try:
-        books = Book.objects.filter(category=category).order_by("-view_count")[:10]
+        books = Book.objects.filter(category=category,outdated=False).order_by("-view_count")[:10]
         if len(books)<5:
             return Response({"books":[]},status=200)
         else:

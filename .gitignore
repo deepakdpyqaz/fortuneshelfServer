@@ -9,3 +9,4 @@ payment/config.json
 assets/
 *.xlsx
 *.log
+pincode.json

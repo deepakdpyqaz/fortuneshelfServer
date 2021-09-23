@@ -7,3 +7,9 @@ class Utilities(models.Model):
 
     def __str__(self):
         return self.key
+
+class Pincode(models.Model):
+    pincode = models.CharField(max_length=6)
+    state=models.CharField(max_length=30)
+    district=models.CharField(max_length=40)
+

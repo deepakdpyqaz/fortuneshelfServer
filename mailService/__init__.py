@@ -5,7 +5,7 @@ from django.core.mail import send_mail
 from django.utils.html import strip_tags
 from django.template.loader import render_to_string
 import boto3
-
+import logging
 
 
 class EmailThread(threading.Thread):
@@ -28,16 +28,19 @@ class SmsThread(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
-        client = boto3.client('sns',
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            region_name=settings.REGION_NAME
-        )
-        response = client.publish(
-            PhoneNumber=self.recipient,
-            Message = self.message,
-            Subject = self.subject
-        )
+        try:
+            client = boto3.client('sns',
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                region_name=settings.REGION_NAME
+            )
+            response = client.publish(
+                PhoneNumber=self.recipient,
+                Message = self.message,
+                Subject = self.subject
+            )
+        except Exception as e:
+            logging.error(str(e))
 def send_html_mail(subject, message, recipient_list):
     html_message = render_to_string(message["template"],message["data"])
     plain_message = strip_tags(html_message)
