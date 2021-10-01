@@ -41,9 +41,9 @@ class NimbusCreateOrderThread(threading.Thread):
             "state":str(self.order.state),
             "country":"India",
             "pincode":int(self.order.pincode),
-            "length":length,
-            "breadth":breadth,
-            "height":height,
+            "length":10,
+            "breadth":12,
+            "height":10,
             "weight":weight
         }
         payload.update(products)
@@ -55,7 +55,7 @@ class NimbusCreateOrderThread(threading.Thread):
         if r["status"]:
             self.order.trackingId=r["data"]
             self.order.weight = weight
-            self.order.dimension = f"{length} X {breadth} X {height}"
+            self.order.dimension = f"10 X 12 X 10"
             self.order.save()
         else:
             loggging.error(r.get("message","Error in nimbuspost"))

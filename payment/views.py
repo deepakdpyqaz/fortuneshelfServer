@@ -124,7 +124,7 @@ def success(request):
         totalAmount = float(order.amount)+float(order.delivery_charges)-float(order.discount)
         create_order(order,books)
         trackingUrl = f"https://fortuneshelf.com/trackorder/?orderId={order.orderId}"
-        send_html_mail("Order Confirmation",{"template":"mail/order.html","data":{"name":order.first_name+" "+order.last_name,"amount":float(order.amount),"discount":float(order.discount),"totalAmount":totalAmount,"order_id":order.orderId,"deliveryCharges":float(order.delivery_charges),"orderDetails":books,"url":trackingUrl}} , [order.email])
+        send_html_mail("Order Confirmation",{"template":"mail/order.html","data":{"name":order.first_name+" "+order.last_name,"amount":float(order.amount),"discount":float(order.discount),"codCharges":0,"totalAmount":totalAmount,"order_id":order.orderId,"deliveryCharges":float(order.delivery_charges),"orderDetails":books,"url":trackingUrl}} , [order.email])
         send_sms(
             "Order Confirmation",
             {"type": "Order", "params": {"name":order.first_name+" "+order.last_name,"orderId": order.orderId,"amount":totalAmount,"url":trackingUrl}},

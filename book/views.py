@@ -16,6 +16,8 @@ from django.conf import settings
 from django.db.models import Subquery
 import logging
 from manager.views import get_manager
+import math
+import time
 class updateBookView(threading.Thread):
     def __init__(self,booklst):
         self.booklst=booklst
@@ -37,7 +39,7 @@ def getBooks(request):
         page_number = int(request.query_params.get("page_number",1))
         per_page = int(request.query_params.get("per_page",25))
         order_by = request.query_params.get("order_by","-view_count")
-        isDescending = bool(request.query_params.get("isDescending",False))
+        isDescending = (request.query_params.get("isDescending",False))
         low_price = int(request.query_params.get("low_price",0))
         high_price = int(request.query_params.get("high_price",0))
         language = request.query_params.get("language",None)
@@ -54,8 +56,9 @@ def getBooks(request):
 def getBooksFromDb(page_number,per_page,order_by,desc=False,low_price=None,high_price=None,language=None,category=None,delivery_free=False):
     if not order_by:
         order_by="-view_count"
-    if desc:
-        order_by="-"+order_by
+    if desc and desc!="false":
+        if order_by[0]!="-":
+            order_by="-"+order_by
     filters={}
     if language:
         filters["language"]=language
@@ -94,7 +97,6 @@ def book_by_id(request,bookid):
     try:
         START = 1000000
         outdatedAccess=False
-        print(request.headers)
         if "authorization" in request.headers:
             op_status,manager = get_manager(request.headers.get("authorization",""))
             if op_status and manager.books:
@@ -292,7 +294,7 @@ def runScript(request):
     #     return Response({"status":"success","success":success,"fail":fail,"data":data})
     # except Exception as e:
     #     return Response({'status':"fail","error":str(e)})
-    with open("data-new.csv",encoding="utf-8",newline="\n") as f:
+    with open("data-new2.csv",encoding="utf-8",newline="\n") as f:
         reader = csv.reader(f,delimiter=",")
         success=0
         fail = 0
@@ -311,35 +313,48 @@ def runScript(request):
                 language = row[2].lower()
                 if not id and not title and not language:
                     continue
-                weight = int(row[3])
-                price = int(row[4])
-                discount = int(row[5])
-                delivery_factor = int(row[6])
-                max_stock = int(row[7])
-                category = row[8]
+                max_stock=100000
+                discount=0
+
+                price = math.floor(float(row[3]))
+                length=math.floor(float(row[4]))
+                breadth=math.floor(float(row[5]))
+                height=math.floor(float(row[6]))
+                weight = math.floor(float(row[7]))
+                description=row[8]
+                category = (row[9])
+                delivery_factor = math.floor(float(row[10]))
+                picture = row[11]
+                title = title.replace("(","( ")
+                title=title.replace(")"," )")
                 if not category:
                     category=None
                 if not id:
-                    bk = Book(title=title,language=language.lower(),weight=int(weight),price=int(price),discount=int(discount),delivery_factor=int(delivery_factor),category=category,max_stock=int(max_stock),length=30,breadth=30,height=30,picture=title+".jpg",description=title)
+                    bk = Book(title=title,language=language.lower(),weight=int(weight),price=math.floor(float(price)),discount=int(discount),delivery_factor=int(delivery_factor),category=category.lower(),max_stock=int(max_stock),length=length,breadth=breadth,height=height,picture=picture,description=description,)
                     added+=1
                 else:
-                    bk = Book.objects.filter(id=id)
+                    bk = Book.objects.filter(id=math.floor(float(id)))
                     bk = bk.first()
                 if not bk:
                     fail+=1
                     failList[id]=title, "bk not found"
                     continue
                 bk.title = title
-                bk.language=language
+                bk.language=language.lower()
                 bk.weight=weight
-                bk.price=price
+                bk.price=math.floor(float(price))
                 bk.discount=discount
                 bk.delivery_factor = delivery_factor
                 bk.max_stock = max_stock
-                if category:
-                    bk.category=category
+                if category and category!="NULL":
+                    bk.category=category.lower()
                 else:
                     bk.category=None
+                bk.length=length
+                bk.weight=weight
+                bk.height=height
+                bk.description=description
+                bk.picture=picture
                 bk.save()
                 success+=1
             except Exception as e:
@@ -374,8 +389,8 @@ def update_books(request):
         return Response({},status=404)
     books = Book.objects.all()
     for book in books:
-        if book.category:
-            book.category = book.category.lower()
+        if not book.picture:
+            book.picture = "book/"+book.title.lower()+".jpg"
             book.save()
     return Response({"status":"success"},status=200)
 

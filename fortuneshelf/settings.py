@@ -14,7 +14,6 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 import logging
-
 load_dotenv() 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -31,7 +30,7 @@ if os.getenv("environment")=="dev":
     DEBUG = True
 else:
     DEBUG = False
-ALLOWED_HOSTS = ["app.fortuneshelf.com","fortuneshelf-load-balancer-1472405162.us-east-1.elb.amazonaws.com","localhost","127.0.0.1","192.168.43.190","192.168.3.242"]
+ALLOWED_HOSTS = ["app.fortuneshelf.com","fortuneshelf-load-balancer-1472405162.us-east-1.elb.amazonaws.com","3.225.254.61","localhost","127.0.0.1","192.168.43.190","192.168.3.242"]
 
 
 # Application definition
@@ -137,7 +136,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
-USE_S3 = not DEBUG  or True
+USE_S3 = not DEBUG
 # AWS
 AWS_ACCESS_KEY_ID = os.getenv("AWSAccessKeyId")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWSSecretKey")
@@ -234,4 +233,10 @@ if LOGGER:
     logging.basicConfig(filename='fortuneshelf.log', level=level,format='%(levelname)s:%(asctime)s %(message)s')
 
 SUPPORT_MAIL = os.getenv("SUPPORT_MAIL")
-DEVELOPER_EMAIL = os.getenv("DEVELOPER_EMAIL")
+DEVELOPER_EMAIL = os.getenv("DEVELOPER_MAIL")
+
+# REDIS CONFIGURATION
+REDIS_HOST = os.getenv("REDIS_HOST")
+REDIS_PORT = os.getenv("REDIS_PORT")
+REDIS_DB = os.getenv("REDIS_DB")
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")

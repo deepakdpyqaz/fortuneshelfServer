@@ -53,7 +53,9 @@ def verify_manager(permission):
 
         return inner
     return verify_manager_wrapper
-
+@api_view(["GET"])
+def access_check(request):
+    return Response({"status":"OK"},status=200)
 @api_view(["post"])
 def login(request):
     username = request.data.get("username",None)

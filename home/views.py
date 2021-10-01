@@ -2,28 +2,48 @@ from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from book.views import getBooksFromDb, books_by_ids
-from home.models import Utilities,Pincode
+from home.models import Utilities,Pincode, Banner
+from home.serializers import BannerSerializer
+from rest_framework.views import APIView
 from django.db.models import Q
 import requests
 import logging
 import json
 from functools import lru_cache
 from manager.views import verify_manager
+from redisClient import Client
 # Create your views here.
+
+
+@api_view(["GET"])
+def healthCheck(request):
+    return Response({"status":"OK","message":"Server is running"},status=200)
 @api_view(["GET"])
 def top_selling(request):
     try:
-        return Response(getBooksFromDb(1,11,"-view_count"))    
+        top_selling = Client.getkey("top_selling")
+        if top_selling:
+            return Response(top_selling)
+        else:
+            top_selling = getBooksFromDb(1, 11, "-view_count")
+            Client.setkey("top_selling",top_selling)
+            return Response(top_selling)    
     except Exception as e:
         logging.error(str(e))
         return Response({"status":"fail","message":"Internal Server Error"},status=500)
 
-@lru_cache(maxsize=1)
 def all_filters_from_db():
+    languages=Client.getkey("languages")
+    categories = Client.getkey("categories")
+    if languages and categories:
+        return {"languages":languages,"categories":categories}
+
     filters = Utilities.objects.filter(Q(key="languages")|Q(key="categories"))
     response = {}
     for filter in filters:
         response.update(filter.value)
+
+        Client.setkey(filter.key,filter.value.get(filter.key))
     return response
 @api_view(["GET"])
 def all_filters(request):
@@ -92,14 +112,24 @@ def runScript(request):
 
 
 
-@lru_cache(maxsize=1)
 def getDeliveryChargeFromDb():
+    delivery_charge = Client.getkey("delivery_charge")
+    if delivery_charge:
+        return float(delivery_charge)
     delivery_charge = Utilities.objects.get(key="delivery_charges")
+    Client.setkey("delivery_charge", delivery_charge.value.get("delivery_charge"))
     return float(delivery_charge.value.get("delivery_charge"))
 
+def getCodChargeFromDb():
+    cod_charges = Client.getkey("cod_charges")
+    if cod_charges:
+        return cod_charges
+    cod_charges = Utilities.objects.get(key="cod_charges")
+    Client.setkey("cod_charges",cod_charges.value.get("cod_charges"))
+    return cod_charges.value.get("cod_charges")
 @api_view(["GET"])
 def getDeliveryCharge(request):
-    return Response({"status":"success","delivery_charges":getDeliveryChargeFromDb()},status=200)
+    return Response({"status":"success","delivery_charges":getDeliveryChargeFromDb(),"cod_charges":getCodChargeFromDb()},status=200)
 
 @api_view(["post"])
 @verify_manager("books")
@@ -111,8 +141,24 @@ def updateDeliveryCharge(request):
         delivery_charge = Utilities.objects.get(key="delivery_charges")
         delivery_charge.value = {"delivery_charge":float(delivery)}
         delivery_charge.save()
-        getDeliveryChargeFromDb.cache_clear()
+        Client.setkey("delivery_charge",float(delivery_charge.value.get("delivery_charge")))
         return Response({"status":"success"},status=200)
     except Exception as e:
         logging.error(str(e))
         return Response({"status":"fail","message":"Internal Server Error"},status=500)
+
+
+# Banner
+class BannerById(APIView):
+    def put(self,request,id):
+        banner = Banner.objects.filter(id=id)
+        if not banner:
+            return Response({"status":"fail","message":"No banner with said Id"},status=404)
+        banner = banner.first()
+        banner.title = title
+        banner.link = link
+
+        if request.FILES:
+            banner.picture = picture
+        banner.save()
+        return Response({"status":"success"})

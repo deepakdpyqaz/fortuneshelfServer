@@ -31,6 +31,7 @@ class Order(models.Model):
     district = models.CharField(max_length=30)
     amount = models.FloatField()
     delivery_charges = models.FloatField()
+    cod_charges = models.FloatField(default=0,null=True,blank=True)
     details = models.JSONField()
     trackingId = models.CharField(max_length=30,null=True)
     courier_url = models.CharField(max_length=100,null=True,blank=True,default=None)
